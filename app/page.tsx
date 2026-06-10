@@ -332,12 +332,12 @@ export default function Home() {
         )}
         <div style={{ display: 'flex', gap: 24, marginTop: 16, padding: '12px 16px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: 8 }}>
           <div>
-            <span style={{ fontSize: 12, color: '#94a3b8' }}>Universal Budget (Business)</span>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#6366f1' }}>{formatCurrency(universalBusiness)}</div>
-          </div>
           <div>
-            <span style={{ fontSize: 12, color: '#94a3b8' }}>Universal Budget (Enterprise)</span>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#6366f1' }}>{formatCurrency(universalEnterprise)}</div>
+            <span style={{ fontSize: 12, color: '#94a3b8' }}>Universal Budget</span>
+            <div style={{ fontSize: 14, color: '#64748b', marginTop: 2 }}>= License Price × {settings.universalMultiplier}</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#6366f1', marginTop: 4 }}>
+              B: {formatCurrency(universalBusiness)} · E: {formatCurrency(universalEnterprise)}
+            </div>
           </div>
           {userSummaries.length > 0 && (
             <div>
