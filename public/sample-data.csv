@@ -1,0 +1,76 @@
+date,username,aic_quantity,model,cost_center_name
+2025-05-01,alice-dev,450,gpt-4o,Engineering
+2025-05-01,bob-coder,1200,gpt-4o,Engineering
+2025-05-01,charlie-ops,80,gpt-4o,DevOps
+2025-05-01,diana-lead,3500,gpt-4o,Engineering
+2025-05-01,eve-analyst,200,gpt-4o,Analytics #business
+2025-05-01,frank-jr,50,gpt-4o,Engineering
+2025-05-01,grace-pm,150,gpt-4o,Product #business
+2025-05-01,hank-senior,2800,gpt-4o,Engineering
+2025-05-01,iris-intern,30,gpt-4o,Engineering
+2025-05-01,jack-devops,600,gpt-4o,DevOps
+2025-05-02,alice-dev,500,gpt-4o,Engineering
+2025-05-02,bob-coder,1100,gpt-4o,Engineering
+2025-05-02,charlie-ops,90,gpt-4o,DevOps
+2025-05-02,diana-lead,3200,gpt-4o,Engineering
+2025-05-02,eve-analyst,180,gpt-4o,Analytics #business
+2025-05-02,frank-jr,40,gpt-4o,Engineering
+2025-05-02,grace-pm,120,gpt-4o,Product #business
+2025-05-02,hank-senior,2600,gpt-4o,Engineering
+2025-05-02,iris-intern,25,gpt-4o,Engineering
+2025-05-02,jack-devops,550,gpt-4o,DevOps
+2025-05-03,alice-dev,480,gpt-4o,Engineering
+2025-05-03,bob-coder,1300,claude-sonnet,Engineering
+2025-05-03,charlie-ops,70,gpt-4o,DevOps
+2025-05-03,diana-lead,3800,claude-sonnet,Engineering
+2025-05-03,eve-analyst,220,gpt-4o,Analytics #business
+2025-05-03,frank-jr,60,gpt-4o,Engineering
+2025-05-03,grace-pm,140,gpt-4o,Product #business
+2025-05-03,hank-senior,3000,claude-sonnet,Engineering
+2025-05-03,iris-intern,35,gpt-4o,Engineering
+2025-05-03,jack-devops,700,gpt-4o,DevOps
+2025-05-04,alice-dev,520,gpt-4o,Engineering
+2025-05-04,bob-coder,1150,gpt-4o,Engineering
+2025-05-04,charlie-ops,100,gpt-4o,DevOps
+2025-05-04,diana-lead,3600,gpt-4o,Engineering
+2025-05-04,eve-analyst,190,gpt-4o,Analytics #business
+2025-05-04,frank-jr,45,gpt-4o,Engineering
+2025-05-04,grace-pm,130,gpt-4o,Product #business
+2025-05-04,hank-senior,2900,gpt-4o,Engineering
+2025-05-04,iris-intern,20,gpt-4o,Engineering
+2025-05-04,jack-devops,650,gpt-4o,DevOps
+2025-05-05,alice-dev,460,claude-sonnet,Engineering
+2025-05-05,bob-coder,1250,claude-sonnet,Engineering
+2025-05-05,charlie-ops,85,gpt-4o,DevOps
+2025-05-05,diana-lead,4000,claude-sonnet,Engineering
+2025-05-05,eve-analyst,210,gpt-4o,Analytics #business
+2025-05-05,frank-jr,55,gpt-4o,Engineering
+2025-05-05,grace-pm,160,gpt-4o,Product #business
+2025-05-05,hank-senior,3100,claude-sonnet,Engineering
+2025-05-05,iris-intern,28,gpt-4o,Engineering
+2025-05-05,jack-devops,580,gpt-4o,DevOps
+2025-05-06,kevin-sec,400,gpt-4o,Security
+2025-05-06,laura-data,900,gpt-4o,Data Science
+2025-05-06,mike-qa,300,gpt-4o,QA #business
+2025-05-06,nancy-arch,2500,claude-sonnet,Architecture
+2025-05-06,oscar-mobile,350,gpt-4o,Mobile
+2025-05-07,kevin-sec,420,gpt-4o,Security
+2025-05-07,laura-data,950,gpt-4o,Data Science
+2025-05-07,mike-qa,280,gpt-4o,QA #business
+2025-05-07,nancy-arch,2700,claude-sonnet,Architecture
+2025-05-07,oscar-mobile,380,gpt-4o,Mobile
+2025-05-08,kevin-sec,380,gpt-4o,Security
+2025-05-08,laura-data,1000,gpt-4o,Data Science
+2025-05-08,mike-qa,320,gpt-4o,QA #business
+2025-05-08,nancy-arch,2600,claude-sonnet,Architecture
+2025-05-08,oscar-mobile,400,gpt-4o,Mobile
+2025-05-09,kevin-sec,450,gpt-4o,Security
+2025-05-09,laura-data,880,gpt-4o,Data Science
+2025-05-09,mike-qa,260,gpt-4o,QA #business
+2025-05-09,nancy-arch,2400,claude-sonnet,Architecture
+2025-05-09,oscar-mobile,360,gpt-4o,Mobile
+2025-05-10,kevin-sec,410,gpt-4o,Security
+2025-05-10,laura-data,920,gpt-4o,Data Science
+2025-05-10,mike-qa,290,gpt-4o,QA #business
+2025-05-10,nancy-arch,2550,claude-sonnet,Architecture
+2025-05-10,oscar-mobile,370,gpt-4o,Mobile
