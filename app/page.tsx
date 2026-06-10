@@ -335,13 +335,21 @@ export default function Home() {
         {csvRows.length === 0 ? (
           <>
             <div style={{ fontSize: 40, marginBottom: 8 }}>📊</div>
-            <p style={{ fontSize: 16, color: '#a855f7' }}>Drop your Premium Request Usage Report CSV here</p>
+            <p style={{ fontSize: 16, color: '#a855f7' }}>Drop your AI Usage Report CSV here</p>
             <p style={{ color: '#64748b', fontSize: 13, marginTop: 4 }}>or click to browse</p>
           </>
         ) : (
-          <p style={{ color: '#22c55e' }}>
-            ✅ <strong>{fileName}</strong> — {csvRows.length.toLocaleString()} rows loaded
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <p style={{ color: '#22c55e', margin: 0 }}>
+              ✅ <strong>{fileName}</strong> — {csvRows.length.toLocaleString()} rows loaded
+            </p>
+            <button
+              style={{ ...BTN_STYLE, padding: '6px 16px', fontSize: 12 }}
+              onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
+            >
+              📂 Load your own CSV
+            </button>
+          </div>
         )}
       </div>
 
