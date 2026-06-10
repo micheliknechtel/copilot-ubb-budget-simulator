@@ -482,10 +482,13 @@ export default function Home() {
               ) : (
                 <>
                   <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
-                    Heavy User Avg: <strong style={{ color: '#ef4444' }}>{formatCurrency(stats.heavyMoyenne)}</strong>
+                    Threshold: MAX(B {formatCurrency(universalBusiness)}, E {formatCurrency(universalEnterprise)}) = <strong style={{ color: '#eab308' }}>{formatCurrency(Math.max(universalBusiness, universalEnterprise))}</strong>
                   </div>
                   <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
-                    = MAX(Universal, {formatCurrency(stats.heavyMoyenne)} × {settings.individualMultiplier})
+                    Heavy User Avg (cost {'>'} {formatCurrency(Math.max(universalBusiness, universalEnterprise))}): <strong style={{ color: '#ef4444' }}>{formatCurrency(stats.heavyMoyenne)}</strong>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+                    = MAX({formatCurrency(Math.max(universalBusiness, universalEnterprise))}, {formatCurrency(stats.heavyMoyenne)} × {settings.individualMultiplier})
                   </div>
                   <div style={{ fontSize: 12, color: '#64748b' }}>
                     = MAX({formatCurrency(Math.max(universalBusiness, universalEnterprise))}, {formatCurrency(stats.heavyMoyenne * settings.individualMultiplier)}) = <strong style={{ color: '#6366f1' }}>{formatCurrency(individualBudget)}</strong>
@@ -493,7 +496,7 @@ export default function Home() {
                 </>
               )}
                 <div style={{ fontSize: 10, color: '#64748b', marginTop: 6, fontStyle: 'italic' }}>
-                  {stats.heavyUsers.toLocaleString()} heavy users (above universal budget) get this budget
+                  {stats.heavyUsers.toLocaleString()} heavy users (cost {'>'} {formatCurrency(Math.max(universalBusiness, universalEnterprise))}) get this budget
                 </div>
               </div>
             )}
@@ -504,7 +507,7 @@ export default function Home() {
                   Moyenne (all {stats.csvUserCount.toLocaleString()} users): <strong style={{ color: '#6366f1' }}>{formatCurrency(stats.moyenne)}</strong>
                 </div>
                 <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
-                  Heavy User Avg ({stats.heavyUsers.toLocaleString()} users above budget): <strong style={{ color: '#ef4444' }}>{formatCurrency(stats.heavyMoyenne)}</strong>
+                  Heavy User Avg ({stats.heavyUsers.toLocaleString()} users {'>'} {formatCurrency(Math.max(universalBusiness, universalEnterprise))}): <strong style={{ color: '#ef4444' }}>{formatCurrency(stats.heavyMoyenne)}</strong>
                 </div>
                 <div style={{ fontSize: 12, color: '#64748b' }}>
                   Median Cost: <strong style={{ color: '#6366f1' }}>{formatCurrency(stats.median)}</strong>
