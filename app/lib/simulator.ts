@@ -4,6 +4,7 @@ export type CsvRow = {
   aic_quantity: number;
   model: string;
   cost_center_name: string;
+  monthly_quota: number;
 };
 
 export type UserSummary = {
@@ -72,29 +73,57 @@ export function parseCsv(text: string): CsvRow[] {
   const dateIdx = headers.indexOf('date');
   const usernameIdx = headers.indexOf('username');
   const aicIdx = headers.indexOf('aic_quantity');
+  const quantityIdx = headers.indexOf('quantity');
   const modelIdx = headers.indexOf('model');
   const ccIdx = headers.indexOf('cost_center_name');
+  const quotaIdx = headers.indexOf('total_monthly_quota');
 
-  if (usernameIdx === -1 || aicIdx === -1) return [];
+  if (usernameIdx === -1) return [];
+  if (aicIdx === -1 && quantityIdx === -1) return [];
 
-  return lines.slice(1).filter(l => l.trim()).map(line => {
+  // Auto-detect: if aic_quantity exists, check if it's all zeros
+  const dataLines = lines.slice(1).filter(l => l.trim());
+  let useQuantity = false;
+  if (quantityIdx !== -1) {
+    if (aicIdx === -1) {
+      useQuantity = true;
+    } else {
+      // Check first 100 rows — if aic_quantity is all 0, use quantity instead
+      const sample = dataLines.slice(0, 100);
+      const allZero = sample.every(line => {
+        const cols = splitCsvLine(line);
+        return (parseFloat(cols[aicIdx]) || 0) === 0;
+      });
+      useQuantity = allZero;
+    }
+  }
+
+  const valueIdx = useQuantity ? quantityIdx : aicIdx;
+
+  return dataLines.map(line => {
     const cols = splitCsvLine(line);
     return {
       date: cols[dateIdx] || '',
       username: cols[usernameIdx] || '',
-      aic_quantity: parseFloat(cols[aicIdx]) || 0,
+      aic_quantity: parseFloat(cols[valueIdx]) || 0,
       model: cols[modelIdx] || '',
       cost_center_name: cols[ccIdx] || '',
+      monthly_quota: quotaIdx !== -1 ? (parseFloat(cols[quotaIdx]) || 0) : 0,
     };
   });
 }
 
-export function getLicenseType(costCenterName: string): 'Business' | 'Enterprise' {
+export function getLicenseType(costCenterName: string, monthlyQuota?: number): 'Business' | 'Enterprise' {
+  // New format: detect by monthly quota (1900 = Business/$19, 3900 = Enterprise/$39)
+  if (monthlyQuota && monthlyQuota > 0) {
+    return monthlyQuota <= 1900 ? 'Business' : 'Enterprise';
+  }
+  // Old format: detect by cost center name tag
   return costCenterName.toLowerCase().includes('#business') ? 'Business' : 'Enterprise';
 }
 
 export function calculateUserSummaries(rows: CsvRow[], settings: Settings): UserSummary[] {
-  const userMap = new Map<string, { totalAic: number; costCenter: string }>();
+  const userMap = new Map<string, { totalAic: number; costCenter: string; monthlyQuota: number }>();
 
   for (const row of rows) {
     const existing = userMap.get(row.username);
@@ -103,8 +132,11 @@ export function calculateUserSummaries(rows: CsvRow[], settings: Settings): User
       if (!existing.costCenter && row.cost_center_name) {
         existing.costCenter = row.cost_center_name;
       }
+      if (!existing.monthlyQuota && row.monthly_quota) {
+        existing.monthlyQuota = row.monthly_quota;
+      }
     } else {
-      userMap.set(row.username, { totalAic: row.aic_quantity, costCenter: row.cost_center_name });
+      userMap.set(row.username, { totalAic: row.aic_quantity, costCenter: row.cost_center_name, monthlyQuota: row.monthly_quota });
     }
   }
 
@@ -121,7 +153,7 @@ export function calculateUserSummaries(rows: CsvRow[], settings: Settings): User
     : moyenne;
 
   return users.map(([username, data]) => {
-    const licenseType = getLicenseType(data.costCenter);
+    const licenseType = getLicenseType(data.costCenter, data.monthlyQuota);
     const licensePrice = licenseType === 'Business' ? settings.businessLicensePrice : settings.enterpriseLicensePrice;
     const universalBudget = licensePrice * settings.universalMultiplier;
     const totalAicCost = data.totalAic * settings.aicRate;

@@ -227,7 +227,14 @@ export default function Home() {
       setFileName(file.name);
       setCurrentPage(1);
       const uniqueUsers = new Set(rows.map(r => r.username));
-      const businessCount = new Set(rows.filter(r => r.cost_center_name.toLowerCase().includes('#business')).map(r => r.username)).size;
+      // Detect license type: prefer monthly_quota, fall back to cost_center_name
+      const hasQuota = rows.some(r => r.monthly_quota > 0);
+      let businessCount: number;
+      if (hasQuota) {
+        businessCount = new Set(rows.filter(r => r.monthly_quota > 0 && r.monthly_quota <= 1900).map(r => r.username)).size;
+      } else {
+        businessCount = new Set(rows.filter(r => r.cost_center_name.toLowerCase().includes('#business')).map(r => r.username)).size;
+      }
       const enterpriseCount = uniqueUsers.size - businessCount;
       setCsvInfo({ totalUsers: uniqueUsers.size, businessUsers: businessCount, enterpriseUsers: enterpriseCount });
       if (!userCountOverride) {
