@@ -61,6 +61,7 @@ export default function Home() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [userCountOverride, setUserCountOverride] = useState(false);
   const [csvInfo, setCsvInfo] = useState<{ totalUsers: number; businessUsers: number; enterpriseUsers: number } | null>(null);
+  const [simulationMode, setSimulationMode] = useState<'conservative' | 'practical'>('practical');
   const [sortKey, setSortKey] = useState<SortKey>('budgetUsedPct');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -138,7 +139,9 @@ export default function Home() {
     // Non-CSV users get universal budget (zero consumption = normal user)
     const universalBudgetBusiness = settings.businessLicensePrice * settings.universalMultiplier;
     const universalBudgetEnterprise = settings.enterpriseLicensePrice * settings.universalMultiplier;
-    const extraEffectiveBudgets = extraBusiness * universalBudgetBusiness + extraEnterprise * universalBudgetEnterprise;
+    const extraEffectiveBudgets = simulationMode === 'conservative'
+      ? extraBusiness * universalBudgetBusiness + extraEnterprise * universalBudgetEnterprise
+      : 0;
 
     const sumEffectiveBudgets = userSummaries.reduce((s, u) => s + u.effectiveBudget, 0) + extraEffectiveBudgets;
     const overageExposure = sumEffectiveBudgets - totalPool;
@@ -171,7 +174,7 @@ export default function Home() {
       suggestedUniversalMultiplier, suggestedEnterpriseBudget,
       extraBusiness, extraEnterprise,
     };
-  }, [userSummaries, settings]);
+  }, [userSummaries, settings, simulationMode]);
 
   const handleFile = useCallback((file: File) => {
     const reader = new FileReader();
@@ -347,6 +350,53 @@ export default function Home() {
 
       {(csvRows.length > 0 || (settings.businessUsers + settings.enterpriseUsers) > 0) && (
         <>
+          {/* Simulation Mode Toggle */}
+          <div style={{ ...GLOW_CARD, borderColor: 'rgba(99, 102, 241, 0.3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 600, color: '#a855f7', margin: 0 }}>🔬 Simulation Mode</h3>
+              <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+                <button
+                  onClick={() => setSimulationMode('practical')}
+                  style={{
+                    padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
+                    background: simulationMode === 'practical' ? 'linear-gradient(135deg, #22c55e, #16a34a)' : 'rgba(15, 23, 42, 0.8)',
+                    color: simulationMode === 'practical' ? '#fff' : '#94a3b8',
+                  }}
+                >
+                  Practical
+                </button>
+                <button
+                  onClick={() => setSimulationMode('conservative')}
+                  style={{
+                    padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
+                    borderLeft: '1px solid rgba(99, 102, 241, 0.3)',
+                    background: simulationMode === 'conservative' ? 'linear-gradient(135deg, #eab308, #ca8a04)' : 'rgba(15, 23, 42, 0.8)',
+                    color: simulationMode === 'conservative' ? '#000' : '#94a3b8',
+                  }}
+                >
+                  Conservative
+                </button>
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>
+              {simulationMode === 'practical' ? (
+                <>
+                  <strong style={{ color: '#22c55e' }}>Practical mode:</strong> Only users with actual consumption contribute to overage exposure.
+                  Zero-consumption users add to the license pool but are <em>not</em> counted in the effective budgets.
+                  Adding users with no consumption <strong>improves</strong> pool utilization and budget validation.
+                  Best for realistic day-to-day budget planning.
+                </>
+              ) : (
+                <>
+                  <strong style={{ color: '#eab308' }}>Conservative mode:</strong> All users (including zero-consumption) contribute to overage exposure,
+                  assuming they <em>could</em> consume up to their universal budget limit.
+                  Each extra user adds potential overage (budget − license = ${(settings.enterpriseLicensePrice * settings.universalMultiplier - settings.enterpriseLicensePrice).toFixed(2)}/Enterprise).
+                  Best for worst-case risk planning and budget safeguards.
+                </>
+              )}
+            </div>
+          </div>
+
           {/* Dashboard */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16, marginBottom: 16 }}>
             {/* Actual Usage Summary */}
