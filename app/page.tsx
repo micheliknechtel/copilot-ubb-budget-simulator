@@ -153,14 +153,25 @@ export default function Home() {
     const nearCount = userSummaries.filter(u => u.status === 'NEAR').length;
     const overCount = userSummaries.filter(u => u.status === 'OVER').length;
 
-    const suggestedUniversalMultiplier = (businessUserCount + enterpriseUserCount) > 0
-      ? median / ((businessUserCount > enterpriseUserCount) ? settings.businessLicensePrice : settings.enterpriseLicensePrice)
+    // Suggested universal multiplier: covers 75th percentile of normal users
+    // Must be > 1.0 (pool sharing requires budget > license price)
+    const normalUserCosts = userSummaries.filter(u => !u.isHeavyUser).map(u => u.totalAicCost).sort((a, b) => a - b);
+    const p75NormalIdx = Math.floor(normalUserCosts.length * 0.75);
+    const p75NormalCost = normalUserCosts.length > 0 ? normalUserCosts[Math.min(p75NormalIdx, normalUserCosts.length - 1)] : 0;
+    const majorityLicensePrice = (businessUserCount > enterpriseUserCount) ? settings.businessLicensePrice : settings.enterpriseLicensePrice;
+    const suggestedUniversalMultiplier = majorityLicensePrice > 0
+      ? Math.max(1.1, Math.ceil(p75NormalCost / majorityLicensePrice * 10) / 10)
       : settings.universalMultiplier;
+
     // Suggested individual multiplier: covers 90th percentile heavy user
+    // Individual Budget = MAX(Universal, Moyenne × IndividualMultiplier)
+    // So we need: Moyenne × IndividualMultiplier >= p90 heavy cost
     const heavyUserCosts = userSummaries.filter(u => u.isHeavyUser).map(u => u.totalAicCost).sort((a, b) => a - b);
     const p90Idx = Math.floor(heavyUserCosts.length * 0.9);
     const p90Cost = heavyUserCosts.length > 0 ? heavyUserCosts[Math.min(p90Idx, heavyUserCosts.length - 1)] : 0;
-    const suggestedIndividualMultiplier = moyenne > 0 ? p90Cost / moyenne : settings.individualMultiplier;
+    const suggestedIndividualMultiplier = moyenne > 0
+      ? Math.max(1.1, Math.ceil(p90Cost / moyenne * 10) / 10)
+      : settings.individualMultiplier;
     const suggestedEnterpriseBudget = Math.ceil(overageExposure / 100) * 100;
 
     return {
@@ -309,9 +320,9 @@ export default function Home() {
               : null;
             const hasSuggestion = suggestion !== null && Math.abs(suggestion - value) > 0.05;
             const suggestionLabel = key === 'universalMultiplier'
-              ? `Based on median cost / license price`
+              ? `Covers 75% of normal users (min 1.1)`
               : key === 'individualMultiplier'
-              ? `Covers 90th percentile heavy user`
+              ? `Covers 90% of heavy users (min 1.1)`
               : key === 'enterpriseBudget'
               ? `Matches current overage exposure`
               : '';
