@@ -156,6 +156,11 @@ export default function Home() {
     const suggestedUniversalMultiplier = (businessUserCount + enterpriseUserCount) > 0
       ? median / ((businessUserCount > enterpriseUserCount) ? settings.businessLicensePrice : settings.enterpriseLicensePrice)
       : settings.universalMultiplier;
+    // Suggested individual multiplier: covers 90th percentile heavy user
+    const heavyUserCosts = userSummaries.filter(u => u.isHeavyUser).map(u => u.totalAicCost).sort((a, b) => a - b);
+    const p90Idx = Math.floor(heavyUserCosts.length * 0.9);
+    const p90Cost = heavyUserCosts.length > 0 ? heavyUserCosts[Math.min(p90Idx, heavyUserCosts.length - 1)] : 0;
+    const suggestedIndividualMultiplier = moyenne > 0 ? p90Cost / moyenne : settings.individualMultiplier;
     const suggestedEnterpriseBudget = Math.ceil(overageExposure / 100) * 100;
 
     return {
@@ -171,7 +176,7 @@ export default function Home() {
       okPct: totalUsers > 0 ? (okCount / totalUsers) * 100 : 0,
       nearPct: totalUsers > 0 ? (nearCount / totalUsers) * 100 : 0,
       overPct: totalUsers > 0 ? (overCount / totalUsers) * 100 : 0,
-      suggestedUniversalMultiplier, suggestedEnterpriseBudget,
+      suggestedUniversalMultiplier, suggestedIndividualMultiplier, suggestedEnterpriseBudget,
       extraBusiness, extraEnterprise,
     };
   }, [userSummaries, settings, simulationMode]);
@@ -295,7 +300,22 @@ export default function Home() {
             ['individualMultiplier', 'Individual Multiplier', settings.individualMultiplier],
             ['enterpriseBudget', 'Enterprise Budget ($)', settings.enterpriseBudget],
             ['aicRate', 'AIC Rate ($/AIC)', settings.aicRate],
-          ] as [keyof Settings, string, number][]).map(([key, label, value]) => (
+          ] as [keyof Settings, string, number][]).map(([key, label, value]) => {
+            const suggestion = stats.csvUserCount > 0
+              ? key === 'universalMultiplier' ? stats.suggestedUniversalMultiplier
+              : key === 'individualMultiplier' ? stats.suggestedIndividualMultiplier
+              : key === 'enterpriseBudget' ? stats.suggestedEnterpriseBudget
+              : null
+              : null;
+            const hasSuggestion = suggestion !== null && Math.abs(suggestion - value) > 0.05;
+            const suggestionLabel = key === 'universalMultiplier'
+              ? `Based on median cost / license price`
+              : key === 'individualMultiplier'
+              ? `Covers 90th percentile heavy user`
+              : key === 'enterpriseBudget'
+              ? `Matches current overage exposure`
+              : '';
+            return (
             <div key={key}>
               <label style={{ fontSize: 12, color: '#94a3b8', display: 'block', marginBottom: 4 }}>{label}</label>
               <input
@@ -308,8 +328,22 @@ export default function Home() {
                 }}
                 style={INPUT_STYLE}
               />
+              {hasSuggestion && (
+                <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: 11, color: '#eab308' }} title={suggestionLabel}>
+                    {'\u{1F4A1}'} Suggested: <strong>{key === 'enterpriseBudget' ? formatCurrency(suggestion) : suggestion.toFixed(2)}</strong>
+                  </span>
+                  <button
+                    onClick={() => setSettings(prev => ({ ...prev, [key]: Math.round(suggestion * 100) / 100 }))}
+                    style={{ fontSize: 10, color: '#a855f7', background: 'none', border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: 4, padding: '1px 6px', cursor: 'pointer' }}
+                  >
+                    Apply
+                  </button>
+                </div>
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
         {csvInfo && (
           <div style={{ marginTop: 12, padding: '10px 16px', background: 'rgba(34, 197, 94, 0.08)', borderRadius: 8, border: '1px solid rgba(34, 197, 94, 0.2)' }}>
@@ -472,24 +506,6 @@ export default function Home() {
               </div>
             </div>
           </div>
-
-          {/* Recommendations */}
-          {(Math.abs(stats.suggestedUniversalMultiplier - settings.universalMultiplier) > 0.2 ||
-            Math.abs(stats.suggestedEnterpriseBudget - settings.enterpriseBudget) > 1000) && (
-            <div style={{ ...GLOW_CARD, borderColor: 'rgba(234, 179, 8, 0.4)' }}>
-              <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: '#eab308' }}>💡 Recommendations</h3>
-              {Math.abs(stats.suggestedUniversalMultiplier - settings.universalMultiplier) > 0.2 && (
-                <p style={{ color: '#94a3b8', marginBottom: 4 }}>
-                  Suggested Universal Multiplier: <strong style={{ color: '#eab308' }}>{stats.suggestedUniversalMultiplier.toFixed(2)}</strong> (current: {settings.universalMultiplier})
-                </p>
-              )}
-              {Math.abs(stats.suggestedEnterpriseBudget - settings.enterpriseBudget) > 1000 && (
-                <p style={{ color: '#94a3b8' }}>
-                  Suggested Enterprise Budget: <strong style={{ color: '#eab308' }}>{formatCurrency(stats.suggestedEnterpriseBudget)}</strong> (current: {formatCurrency(settings.enterpriseBudget)})
-                </p>
-              )}
-            </div>
-          )}
 
           {/* Table Controls */}
           <div style={{ ...GLOW_CARD, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
