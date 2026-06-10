@@ -153,25 +153,40 @@ export default function Home() {
     const nearCount = userSummaries.filter(u => u.status === 'NEAR').length;
     const overCount = userSummaries.filter(u => u.status === 'OVER').length;
 
-    // Suggested universal multiplier: covers 75th percentile of normal users
-    // Must be > 1.0 (pool sharing requires budget > license price)
-    const normalUserCosts = userSummaries.filter(u => !u.isHeavyUser).map(u => u.totalAicCost).sort((a, b) => a - b);
-    const p75NormalIdx = Math.floor(normalUserCosts.length * 0.75);
-    const p75NormalCost = normalUserCosts.length > 0 ? normalUserCosts[Math.min(p75NormalIdx, normalUserCosts.length - 1)] : 0;
-    const majorityLicensePrice = (businessUserCount > enterpriseUserCount) ? settings.businessLicensePrice : settings.enterpriseLicensePrice;
-    const suggestedUniversalMultiplier = majorityLicensePrice > 0
-      ? Math.max(1.1, Math.ceil(p75NormalCost / majorityLicensePrice * 10) / 10)
-      : settings.universalMultiplier;
+    // Suggested multipliers at different coverage levels
+    // Normal user blocked when: AIC cost > License × UniversalMultiplier
+    // → multiplier needed = AIC cost / license price
+    const normalUserMultipliers = userSummaries
+      .filter(u => !u.isHeavyUser)
+      .map(u => u.totalAicCost / (u.licenseType === 'Business' ? settings.businessLicensePrice : settings.enterpriseLicensePrice))
+      .sort((a, b) => a - b);
 
-    // Suggested individual multiplier: covers 90th percentile heavy user
-    // Individual Budget = MAX(Universal, Moyenne × IndividualMultiplier)
-    // So we need: Moyenne × IndividualMultiplier >= p90 heavy cost
-    const heavyUserCosts = userSummaries.filter(u => u.isHeavyUser).map(u => u.totalAicCost).sort((a, b) => a - b);
-    const p90Idx = Math.floor(heavyUserCosts.length * 0.9);
-    const p90Cost = heavyUserCosts.length > 0 ? heavyUserCosts[Math.min(p90Idx, heavyUserCosts.length - 1)] : 0;
-    const suggestedIndividualMultiplier = moyenne > 0
-      ? Math.max(1.1, Math.ceil(p90Cost / moyenne * 10) / 10)
-      : settings.individualMultiplier;
+    // Heavy user blocked when: AIC cost > MAX(Universal, Moyenne × IndividualMultiplier)
+    // → multiplier needed = AIC cost / moyenne
+    const heavyUserMultipliers = userSummaries
+      .filter(u => u.isHeavyUser && moyenne > 0)
+      .map(u => u.totalAicCost / moyenne)
+      .sort((a, b) => a - b);
+
+    const getPercentile = (arr: number[], pct: number) => {
+      if (arr.length === 0) return 1.1;
+      const idx = Math.min(Math.floor(arr.length * pct / 100), arr.length - 1);
+      return Math.max(1.1, Math.ceil(arr[idx] * 10) / 10);
+    };
+
+    const universalOptions = {
+      p90: getPercentile(normalUserMultipliers, 90),
+      p95: getPercentile(normalUserMultipliers, 95),
+      p100: getPercentile(normalUserMultipliers, 100),
+    };
+    const individualOptions = {
+      p90: getPercentile(heavyUserMultipliers, 90),
+      p95: getPercentile(heavyUserMultipliers, 95),
+      p100: getPercentile(heavyUserMultipliers, 100),
+    };
+
+    const suggestedUniversalMultiplier = universalOptions.p95;
+    const suggestedIndividualMultiplier = individualOptions.p95;
     const suggestedEnterpriseBudget = Math.ceil(overageExposure / 100) * 100;
 
     return {
@@ -188,6 +203,7 @@ export default function Home() {
       nearPct: totalUsers > 0 ? (nearCount / totalUsers) * 100 : 0,
       overPct: totalUsers > 0 ? (overCount / totalUsers) * 100 : 0,
       suggestedUniversalMultiplier, suggestedIndividualMultiplier, suggestedEnterpriseBudget,
+      universalOptions, individualOptions,
       extraBusiness, extraEnterprise,
     };
   }, [userSummaries, settings, simulationMode]);
@@ -312,20 +328,15 @@ export default function Home() {
             ['enterpriseBudget', 'Enterprise Budget ($)', settings.enterpriseBudget],
             ['aicRate', 'AIC Rate ($/AIC)', settings.aicRate],
           ] as [keyof Settings, string, number][]).map(([key, label, value]) => {
-            const suggestion = stats.csvUserCount > 0
-              ? key === 'universalMultiplier' ? stats.suggestedUniversalMultiplier
-              : key === 'individualMultiplier' ? stats.suggestedIndividualMultiplier
-              : key === 'enterpriseBudget' ? stats.suggestedEnterpriseBudget
+            const options = stats.csvUserCount > 0
+              ? key === 'universalMultiplier' ? stats.universalOptions
+              : key === 'individualMultiplier' ? stats.individualOptions
               : null
               : null;
-            const hasSuggestion = suggestion !== null && Math.abs(suggestion - value) > 0.05;
-            const suggestionLabel = key === 'universalMultiplier'
-              ? `Covers 75% of normal users (min 1.1)`
-              : key === 'individualMultiplier'
-              ? `Covers 90% of heavy users (min 1.1)`
-              : key === 'enterpriseBudget'
-              ? `Matches current overage exposure`
-              : '';
+            const enterpriseSuggestion = stats.csvUserCount > 0 && key === 'enterpriseBudget' ? stats.suggestedEnterpriseBudget : null;
+            const hasOptions = options !== null;
+            const hasEnterpriseSuggestion = enterpriseSuggestion !== null && Math.abs(enterpriseSuggestion - value) > 100;
+            const optionLabel = key === 'universalMultiplier' ? 'normal' : 'heavy';
             return (
             <div key={key}>
               <label style={{ fontSize: 12, color: '#94a3b8', display: 'block', marginBottom: 4 }}>{label}</label>
@@ -339,13 +350,36 @@ export default function Home() {
                 }}
                 style={INPUT_STYLE}
               />
-              {hasSuggestion && (
+              {hasOptions && (
+                <div style={{ marginTop: 4 }}>
+                  <div style={{ fontSize: 10, color: '#64748b', marginBottom: 3 }}>
+                    Blocks fewest {optionLabel} users:
+                  </div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {([['90%', options.p90], ['95%', options.p95], ['100%', options.p100]] as [string, number][]).map(([pctLabel, val]) => (
+                      <button
+                        key={pctLabel}
+                        onClick={() => setSettings(prev => ({ ...prev, [key]: Math.round(val * 100) / 100 }))}
+                        style={{
+                          fontSize: 10, cursor: 'pointer', borderRadius: 4, padding: '2px 6px',
+                          border: Math.abs(value - val) < 0.05 ? '1px solid #a855f7' : '1px solid rgba(148, 163, 184, 0.2)',
+                          background: Math.abs(value - val) < 0.05 ? 'rgba(168, 85, 247, 0.15)' : 'rgba(15, 23, 42, 0.6)',
+                          color: Math.abs(value - val) < 0.05 ? '#a855f7' : '#94a3b8',
+                        }}
+                      >
+                        {pctLabel} = {val.toFixed(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {hasEnterpriseSuggestion && (
                 <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ fontSize: 11, color: '#eab308' }} title={suggestionLabel}>
-                    {'\u{1F4A1}'} Suggested: <strong>{key === 'enterpriseBudget' ? formatCurrency(suggestion) : suggestion.toFixed(2)}</strong>
+                  <span style={{ fontSize: 11, color: '#eab308' }}>
+                    {'\u{1F4A1}'} Suggested: <strong>{formatCurrency(enterpriseSuggestion)}</strong>
                   </span>
                   <button
-                    onClick={() => setSettings(prev => ({ ...prev, [key]: Math.round(suggestion * 100) / 100 }))}
+                    onClick={() => setSettings(prev => ({ ...prev, [key]: Math.round(enterpriseSuggestion * 100) / 100 }))}
                     style={{ fontSize: 10, color: '#a855f7', background: 'none', border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: 4, padding: '1px 6px', cursor: 'pointer' }}
                   >
                     Apply
