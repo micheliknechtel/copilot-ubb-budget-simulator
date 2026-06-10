@@ -565,8 +565,10 @@ export default function Home() {
             <div style={GLOW_CARD}>
               <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: '#a855f7' }}>✅ Budget Validation</h3>
               <div style={{ fontSize: 10, color: '#64748b', marginBottom: 8, lineHeight: 1.5 }}>
-                Sum of all effective budgets (normal×universal + heavy×individual) vs license pool
+                How much budget are you allowing beyond what licenses cover?
               </div>
+              <StatRow label={`Normal (${stats.normalUsers.toLocaleString()} × universal)`} value={formatCurrency(stats.normalUsers * Math.max(universalBusiness, universalEnterprise))} color="#64748b" />
+              <StatRow label={`Heavy (${stats.heavyUsers.toLocaleString()} × ${formatCurrency(individualBudget)})`} value={formatCurrency(stats.heavyUsers * individualBudget)} color="#64748b" />
               <StatRow label="Sum Effective Budgets" value={formatCurrency(stats.sumEffectiveBudgets)} />
               <StatRow label="− License Pool" value={formatCurrency(stats.totalPool)} />
               <div style={{ borderTop: '1px solid rgba(148, 163, 184, 0.2)', margin: '4px 0' }} />
