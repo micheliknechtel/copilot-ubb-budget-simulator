@@ -142,8 +142,8 @@ export default function Home() {
     const extraTotal = extraBusiness + extraEnterprise;
 
     // Non-CSV users get universal budget (zero consumption = normal user)
-    const universalBudgetBusiness = settings.businessLicensePrice * settings.universalMultiplier;
-    const universalBudgetEnterprise = settings.enterpriseLicensePrice * settings.universalMultiplier;
+    const universalBudgetBusiness = settings.universalBudgetOverride > 0 ? settings.universalBudgetOverride : settings.businessLicensePrice * settings.universalMultiplier;
+    const universalBudgetEnterprise = settings.universalBudgetOverride > 0 ? settings.universalBudgetOverride : settings.enterpriseLicensePrice * settings.universalMultiplier;
     const extraEffectiveBudgets = simulationMode === 'conservative'
       ? extraBusiness * universalBudgetBusiness + extraEnterprise * universalBudgetEnterprise
       : 0;
@@ -269,9 +269,11 @@ export default function Home() {
     }
   }, []);
 
-  const universalBusiness = settings.businessLicensePrice * settings.universalMultiplier;
-  const universalEnterprise = settings.enterpriseLicensePrice * settings.universalMultiplier;
-  const individualBudget = Math.max(universalBusiness, universalEnterprise, stats.heavyMoyenne * settings.individualMultiplier);
+  const universalBusiness = settings.universalBudgetOverride > 0 ? settings.universalBudgetOverride : settings.businessLicensePrice * settings.universalMultiplier;
+  const universalEnterprise = settings.universalBudgetOverride > 0 ? settings.universalBudgetOverride : settings.enterpriseLicensePrice * settings.universalMultiplier;
+  const individualBudget = settings.individualBudgetOverride > 0
+    ? settings.individualBudgetOverride
+    : Math.max(universalBusiness, universalEnterprise, stats.heavyMoyenne * settings.individualMultiplier);
 
   const handleExportCsv = useCallback(() => {
     const csvContent = exportTableCsv(filteredUsers);
@@ -343,6 +345,8 @@ export default function Home() {
             ['enterpriseLicensePrice', 'Enterprise License ($)', settings.enterpriseLicensePrice],
             ['universalMultiplier', 'Universal Multiplier', settings.universalMultiplier],
             ['individualMultiplier', 'Individual Multiplier', settings.individualMultiplier],
+            ['universalBudgetOverride', 'Universal Budget Override ($)', settings.universalBudgetOverride],
+            ['individualBudgetOverride', 'Individual Budget Override ($)', settings.individualBudgetOverride],
             ['enterpriseBudget', 'Enterprise Budget ($)', settings.enterpriseBudget],
             ['aicRate', 'AIC Rate ($/AIC)', settings.aicRate],
           ] as [keyof Settings, string, number][]).map(([key, label, value]) => {
@@ -351,22 +355,30 @@ export default function Home() {
               : key === 'individualMultiplier' ? stats.individualOptions
               : null
               : null;
+            const isOverrideField = key === 'universalBudgetOverride' || key === 'individualBudgetOverride';
+            const isMultiplierDisabled = (key === 'universalMultiplier' && settings.universalBudgetOverride > 0)
+              || (key === 'individualMultiplier' && settings.individualBudgetOverride > 0);
             const enterpriseSuggestion = stats.csvUserCount > 0 && key === 'enterpriseBudget' ? stats.suggestedEnterpriseBudget : null;
             const hasOptions = options !== null;
             const hasEnterpriseSuggestion = enterpriseSuggestion !== null && Math.abs(enterpriseSuggestion - value) > 100;
             const optionLabel = key === 'universalMultiplier' ? 'normal' : 'heavy';
             return (
             <div key={key}>
-              <label style={{ fontSize: 12, color: '#94a3b8', display: 'block', marginBottom: 4 }}>{label}</label>
+              <label style={{ fontSize: 12, color: isMultiplierDisabled ? '#475569' : '#94a3b8', display: 'block', marginBottom: 4 }}>
+                {label}
+                {isOverrideField && <span style={{ fontSize: 10, color: '#64748b' }}> (0 = use multiplier)</span>}
+                {isMultiplierDisabled && <span style={{ fontSize: 10, color: '#eab308' }}> (overridden)</span>}
+              </label>
               <input
                 type="number"
                 step={key === 'aicRate' ? '0.001' : key.includes('Multiplier') ? '0.1' : '1'}
                 value={value}
+                disabled={isMultiplierDisabled}
                 onChange={(e) => {
                   updateSetting(key, e.target.value);
                   if (key === 'businessUsers' || key === 'enterpriseUsers') setUserCountOverride(true);
                 }}
-                style={INPUT_STYLE}
+                style={{ ...INPUT_STYLE, opacity: isMultiplierDisabled ? 0.4 : 1 }}
               />
               {hasOptions && (
                 <div style={{ marginTop: 4 }}>
@@ -431,29 +443,55 @@ export default function Home() {
           <div style={{ fontSize: 13, fontWeight: 600, color: '#a855f7', marginBottom: 12 }}>💡 Budget Calculation (using your current settings)</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
             <div style={{ padding: '12px', background: 'rgba(15, 23, 42, 0.6)', borderRadius: 8, border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-              <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, marginBottom: 6 }}>UNIVERSAL BUDGET (Normal Users)</div>
-              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
-                Business: ${settings.businessLicensePrice} × {settings.universalMultiplier} = <strong style={{ color: '#6366f1' }}>{formatCurrency(universalBusiness)}</strong>
+              <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, marginBottom: 6 }}>
+                UNIVERSAL BUDGET (Normal Users)
+                {settings.universalBudgetOverride > 0
+                  ? <span style={{ color: '#eab308', marginLeft: 6 }}>⚡ Manual</span>
+                  : <span style={{ color: '#6366f1', marginLeft: 6 }}>📊 Data-driven</span>}
               </div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
-                Enterprise: ${settings.enterpriseLicensePrice} × {settings.universalMultiplier} = <strong style={{ color: '#6366f1' }}>{formatCurrency(universalEnterprise)}</strong>
-              </div>
+              {settings.universalBudgetOverride > 0 ? (
+                <div style={{ fontSize: 12, color: '#64748b' }}>
+                  Fixed: <strong style={{ color: '#6366f1' }}>{formatCurrency(settings.universalBudgetOverride)}</strong> per user
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+                    Business: ${settings.businessLicensePrice} × {settings.universalMultiplier} = <strong style={{ color: '#6366f1' }}>{formatCurrency(universalBusiness)}</strong>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b' }}>
+                    Enterprise: ${settings.enterpriseLicensePrice} × {settings.universalMultiplier} = <strong style={{ color: '#6366f1' }}>{formatCurrency(universalEnterprise)}</strong>
+                  </div>
+                </>
+              )}
               <div style={{ fontSize: 10, color: '#64748b', marginTop: 6, fontStyle: 'italic' }}>
                 {stats.normalUsers.toLocaleString()} normal users get this budget
               </div>
             </div>
             {userSummaries.length > 0 && (
               <div style={{ padding: '12px', background: 'rgba(15, 23, 42, 0.6)', borderRadius: 8, border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginBottom: 6 }}>INDIVIDUAL BUDGET (Heavy Users)</div>
-                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
-                  Heavy User Avg: <strong style={{ color: '#ef4444' }}>{formatCurrency(stats.heavyMoyenne)}</strong>
-                </div>
-                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
-                  = MAX(Universal, {formatCurrency(stats.heavyMoyenne)} × {settings.individualMultiplier})
-                </div>
+                <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginBottom: 6 }}>
+                INDIVIDUAL BUDGET (Heavy Users)
+                {settings.individualBudgetOverride > 0
+                  ? <span style={{ color: '#eab308', marginLeft: 6 }}>⚡ Manual</span>
+                  : <span style={{ color: '#6366f1', marginLeft: 6 }}>📊 Data-driven</span>}
+              </div>
+              {settings.individualBudgetOverride > 0 ? (
                 <div style={{ fontSize: 12, color: '#64748b' }}>
-                  = MAX({formatCurrency(Math.max(universalBusiness, universalEnterprise))}, {formatCurrency(stats.heavyMoyenne * settings.individualMultiplier)}) = <strong style={{ color: '#6366f1' }}>{formatCurrency(individualBudget)}</strong>
+                  Fixed: <strong style={{ color: '#6366f1' }}>{formatCurrency(settings.individualBudgetOverride)}</strong> per user
                 </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+                    Heavy User Avg: <strong style={{ color: '#ef4444' }}>{formatCurrency(stats.heavyMoyenne)}</strong>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+                    = MAX(Universal, {formatCurrency(stats.heavyMoyenne)} × {settings.individualMultiplier})
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b' }}>
+                    = MAX({formatCurrency(Math.max(universalBusiness, universalEnterprise))}, {formatCurrency(stats.heavyMoyenne * settings.individualMultiplier)}) = <strong style={{ color: '#6366f1' }}>{formatCurrency(individualBudget)}</strong>
+                  </div>
+                </>
+              )}
                 <div style={{ fontSize: 10, color: '#64748b', marginTop: 6, fontStyle: 'italic' }}>
                   {stats.heavyUsers.toLocaleString()} heavy users (above moyenne) get this budget
                 </div>

@@ -29,6 +29,8 @@ export type Settings = {
   enterpriseLicensePrice: number;
   universalMultiplier: number;
   individualMultiplier: number;
+  universalBudgetOverride: number;
+  individualBudgetOverride: number;
   enterpriseBudget: number;
   aicRate: number;
   businessUsers: number;
@@ -40,6 +42,8 @@ export const DEFAULT_SETTINGS: Settings = {
   enterpriseLicensePrice: 39,
   universalMultiplier: 1.3,
   individualMultiplier: 1.5,
+  universalBudgetOverride: 0,
+  individualBudgetOverride: 0,
   enterpriseBudget: 51062,
   aicRate: 0.01,
   businessUsers: 0,
@@ -155,10 +159,14 @@ export function calculateUserSummaries(rows: CsvRow[], settings: Settings): User
   return users.map(([username, data]) => {
     const licenseType = getLicenseType(data.costCenter, data.monthlyQuota);
     const licensePrice = licenseType === 'Business' ? settings.businessLicensePrice : settings.enterpriseLicensePrice;
-    const universalBudget = licensePrice * settings.universalMultiplier;
+    const universalBudget = settings.universalBudgetOverride > 0
+      ? settings.universalBudgetOverride
+      : licensePrice * settings.universalMultiplier;
     const totalAicCost = data.totalAic * settings.aicRate;
     const isHeavyUser = totalAicCost > moyenne;
-    const individualBudget = Math.max(universalBudget, heavyMoyenne * settings.individualMultiplier);
+    const individualBudget = settings.individualBudgetOverride > 0
+      ? settings.individualBudgetOverride
+      : Math.max(universalBudget, heavyMoyenne * settings.individualMultiplier);
     const effectiveBudget = isHeavyUser ? individualBudget : universalBudget;
     const includedCredits = licensePrice;
     const overage = Math.max(0, totalAicCost - includedCredits);
