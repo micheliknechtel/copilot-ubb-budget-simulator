@@ -60,6 +60,7 @@ export default function Home() {
   const [fileName, setFileName] = useState('');
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [userCountOverride, setUserCountOverride] = useState(false);
+  const [csvInfo, setCsvInfo] = useState<{ totalUsers: number; businessUsers: number; enterpriseUsers: number } | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('budgetUsedPct');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -107,7 +108,7 @@ export default function Home() {
 
   const stats = useMemo(() => {
     const csvUserCount = userSummaries.length;
-    const totalUsers = settings.numberOfUsers > 0 ? settings.numberOfUsers : csvUserCount;
+    const totalUsers = (settings.businessUsers + settings.enterpriseUsers) || csvUserCount;
     const totalAicCost = userSummaries.reduce((s, u) => s + u.totalAicCost, 0);
     const moyenne = csvUserCount > 0 ? totalAicCost / csvUserCount : 0;
     const sortedCosts = userSummaries.map(u => u.totalAicCost).sort((a, b) => a - b);
@@ -118,8 +119,8 @@ export default function Home() {
       : 0;
     const heavyUsers = userSummaries.filter(u => u.isHeavyUser);
     const normalUsers = userSummaries.filter(u => !u.isHeavyUser);
-    const businessUserCount = Math.round(totalUsers * settings.businessUserPct / 100);
-    const enterpriseUserCount = totalUsers - businessUserCount;
+    const businessUserCount = settings.businessUsers;
+    const enterpriseUserCount = settings.enterpriseUsers;
     const businessPool = businessUserCount * settings.businessLicensePrice;
     const enterprisePool = enterpriseUserCount * settings.enterpriseLicensePrice;
     const totalPool = businessPool + enterprisePool;
@@ -132,7 +133,7 @@ export default function Home() {
     const nearCount = userSummaries.filter(u => u.status === 'NEAR').length;
     const overCount = userSummaries.filter(u => u.status === 'OVER').length;
 
-    const suggestedUniversalMultiplier = totalUsers > 0
+    const suggestedUniversalMultiplier = (businessUserCount + enterpriseUserCount) > 0
       ? median / ((businessUserCount > enterpriseUserCount) ? settings.businessLicensePrice : settings.enterpriseLicensePrice)
       : settings.universalMultiplier;
     const suggestedEnterpriseBudget = Math.ceil(overageExposure / 100) * 100;
@@ -161,11 +162,12 @@ export default function Home() {
       setCsvRows(rows);
       setFileName(file.name);
       setCurrentPage(1);
+      const uniqueUsers = new Set(rows.map(r => r.username));
+      const businessCount = new Set(rows.filter(r => r.cost_center_name.toLowerCase().includes('#business')).map(r => r.username)).size;
+      const enterpriseCount = uniqueUsers.size - businessCount;
+      setCsvInfo({ totalUsers: uniqueUsers.size, businessUsers: businessCount, enterpriseUsers: enterpriseCount });
       if (!userCountOverride) {
-        const uniqueUsers = new Set(rows.map(r => r.username));
-        const businessCount = new Set(rows.filter(r => r.cost_center_name.toLowerCase().includes('#business')).map(r => r.username)).size;
-        const pct = uniqueUsers.size > 0 ? Math.round((businessCount / uniqueUsers.size) * 100) : 0;
-        setSettings(prev => ({ ...prev, numberOfUsers: uniqueUsers.size, businessUserPct: pct }));
+        setSettings(prev => ({ ...prev, businessUsers: businessCount, enterpriseUsers: enterpriseCount }));
       }
     };
     reader.readAsText(file);
@@ -263,8 +265,8 @@ export default function Home() {
         <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, color: '#a855f7' }}>⚙️ Settings</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
           {([
-            ['numberOfUsers', 'Number of Users', settings.numberOfUsers],
-            ['businessUserPct', 'Business Users (%)', settings.businessUserPct],
+            ['businessUsers', 'Business Users', settings.businessUsers],
+            ['enterpriseUsers', 'Enterprise Users', settings.enterpriseUsers],
             ['businessLicensePrice', 'Business License ($)', settings.businessLicensePrice],
             ['enterpriseLicensePrice', 'Enterprise License ($)', settings.enterpriseLicensePrice],
             ['universalMultiplier', 'Universal Multiplier', settings.universalMultiplier],
@@ -276,17 +278,36 @@ export default function Home() {
               <label style={{ fontSize: 12, color: '#94a3b8', display: 'block', marginBottom: 4 }}>{label}</label>
               <input
                 type="number"
-                step={key === 'aicRate' ? '0.001' : key.includes('Multiplier') ? '0.1' : key === 'businessUserPct' ? '1' : '1'}
+                step={key === 'aicRate' ? '0.001' : key.includes('Multiplier') ? '0.1' : '1'}
                 value={value}
                 onChange={(e) => {
                   updateSetting(key, e.target.value);
-                  if (key === 'numberOfUsers' || key === 'businessUserPct') setUserCountOverride(true);
+                  if (key === 'businessUsers' || key === 'enterpriseUsers') setUserCountOverride(true);
                 }}
                 style={INPUT_STYLE}
               />
             </div>
           ))}
         </div>
+        {csvInfo && (
+          <div style={{ marginTop: 12, padding: '10px 16px', background: 'rgba(34, 197, 94, 0.08)', borderRadius: 8, border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+            <span style={{ fontSize: 12, color: '#22c55e', fontWeight: 600 }}>📄 CSV Detected:</span>
+            <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 12 }}>
+              {csvInfo.totalUsers.toLocaleString()} users ({csvInfo.businessUsers.toLocaleString()} Business, {csvInfo.enterpriseUsers.toLocaleString()} Enterprise)
+            </span>
+            {userCountOverride && (
+              <button
+                onClick={() => {
+                  setSettings(prev => ({ ...prev, businessUsers: csvInfo.businessUsers, enterpriseUsers: csvInfo.enterpriseUsers }));
+                  setUserCountOverride(false);
+                }}
+                style={{ marginLeft: 12, fontSize: 11, color: '#a855f7', background: 'none', border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: 4, padding: '2px 8px', cursor: 'pointer' }}
+              >
+                Reset to CSV values
+              </button>
+            )}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 24, marginTop: 16, padding: '12px 16px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: 8 }}>
           <div>
             <span style={{ fontSize: 12, color: '#94a3b8' }}>Universal Budget (Business)</span>
@@ -305,7 +326,7 @@ export default function Home() {
         </div>
       </div>
 
-      {(csvRows.length > 0 || settings.numberOfUsers > 0) && (
+      {(csvRows.length > 0 || (settings.businessUsers + settings.enterpriseUsers) > 0) && (
         <>
           {/* Dashboard */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16, marginBottom: 16 }}>
@@ -313,6 +334,8 @@ export default function Home() {
             <div style={GLOW_CARD}>
               <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: '#a855f7' }}>📈 Actual Usage Summary</h3>
               <StatRow label="Total Users (setting)" value={stats.totalUsers.toLocaleString()} />
+              <StatRow label="Business Users" value={settings.businessUsers.toLocaleString()} />
+              <StatRow label="Enterprise Users" value={settings.enterpriseUsers.toLocaleString()} />
               {stats.csvUserCount > 0 && stats.csvUserCount !== stats.totalUsers && (
                 <StatRow label="Users in CSV" value={stats.csvUserCount.toLocaleString()} color="#94a3b8" />
               )}

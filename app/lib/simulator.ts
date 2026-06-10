@@ -29,8 +29,8 @@ export type Settings = {
   individualMultiplier: number;
   enterpriseBudget: number;
   aicRate: number;
-  numberOfUsers: number;
-  businessUserPct: number;
+  businessUsers: number;
+  enterpriseUsers: number;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -40,8 +40,8 @@ export const DEFAULT_SETTINGS: Settings = {
   individualMultiplier: 1.5,
   enterpriseBudget: 51062,
   aicRate: 0.01,
-  numberOfUsers: 0,
-  businessUserPct: 0,
+  businessUsers: 0,
+  enterpriseUsers: 0,
 };
 
 function splitCsvLine(line: string): string[] {
