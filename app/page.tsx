@@ -259,6 +259,7 @@ export default function Home() {
 
   const universalBusiness = settings.businessLicensePrice * settings.universalMultiplier;
   const universalEnterprise = settings.enterpriseLicensePrice * settings.universalMultiplier;
+  const individualBudget = Math.max(universalBusiness, universalEnterprise, stats.moyenne * settings.individualMultiplier);
 
   const handleExportCsv = useCallback(() => {
     const csvContent = exportTableCsv(filteredUsers);
@@ -422,6 +423,13 @@ export default function Home() {
               B: {formatCurrency(universalBusiness)} {'\u00B7'} E: {formatCurrency(universalEnterprise)}
             </div>
           </div>
+          {userSummaries.length > 0 && (
+            <div>
+              <span style={{ fontSize: 12, color: '#94a3b8' }}>Individual Budget</span>
+              <div style={{ fontSize: 14, color: '#64748b', marginTop: 2 }}>= MAX(Universal, Moyenne × {settings.individualMultiplier})</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#6366f1', marginTop: 4 }}>{formatCurrency(individualBudget)}</div>
+            </div>
+          )}
           {userSummaries.length > 0 && (
             <div>
               <span style={{ fontSize: 12, color: '#94a3b8' }}>Moyenne (Average)</span>
