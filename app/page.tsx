@@ -651,7 +651,7 @@ export default function Home() {
               <div style={{ fontSize: 10, color: '#64748b', marginBottom: 8, lineHeight: 1.5 }}>
                 How much budget are you allowing beyond what licenses cover?
               </div>
-              <StatRow label={`Normal (${stats.normalUsers.toLocaleString()} × universal)`} value={formatCurrency(stats.normalUsers * Math.max(universalBusiness, universalEnterprise))} color="#64748b" />
+              <StatRow label={`Normal (${stats.normalUsers.toLocaleString()} × ${formatCurrency(Math.max(universalBusiness, universalEnterprise))})`} value={formatCurrency(stats.normalUsers * Math.max(universalBusiness, universalEnterprise))} color="#64748b" />
               <StatRow label={`Heavy (${stats.heavyUsers.toLocaleString()} × ${formatCurrency(individualBudget)})`} value={formatCurrency(stats.heavyUsers * individualBudget)} color="#64748b" />
               <StatRow label="Sum Effective Budgets" value={formatCurrency(stats.sumEffectiveBudgets)} />
               <StatRow label="− License Pool" value={formatCurrency(stats.totalPool)} />
@@ -671,8 +671,8 @@ export default function Home() {
             <div style={GLOW_CARD}>
               <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: '#a855f7' }}>🎯 Simulation Impact</h3>
               <div style={{ fontSize: 10, color: '#64748b', marginBottom: 8, lineHeight: 1.5 }}>
-                Users blocked when AIC cost {'>'} their effective budget
-                (Universal: B {formatCurrency(universalBusiness)} / E {formatCurrency(universalEnterprise)} {'\u00B7'} Individual: {formatCurrency(individualBudget)})
+                Users blocked when AIC cost {'>'}= their effective budget
+                (Universal: {formatCurrency(Math.max(universalBusiness, universalEnterprise))} {'\u00B7'} Individual: {formatCurrency(individualBudget)})
               </div>
               <StatRow label="🟢 OK" value={`${stats.okCount} (${formatPct(stats.okPct)})`} color="#22c55e" />
               <StatRow label="🟡 NEAR" value={`${stats.nearCount} (${formatPct(stats.nearPct)})`} color="#eab308" />
