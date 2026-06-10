@@ -128,6 +128,10 @@ export default function Home() {
     const totalPool = businessPool + enterprisePool;
     const poolUtilization = totalPool > 0 ? (totalAicCost / totalPool) * 100 : 0;
 
+    // Consumption by license type
+    const businessConsumption = userSummaries.filter(u => u.licenseType === 'Business').reduce((s, u) => s + u.totalAicCost, 0);
+    const enterpriseConsumption = userSummaries.filter(u => u.licenseType === 'Enterprise').reduce((s, u) => s + u.totalAicCost, 0);
+
     // Count CSV users by license type
     const csvBusinessCount = userSummaries.filter(u => u.licenseType === 'Business').length;
     const csvEnterpriseCount = userSummaries.filter(u => u.licenseType === 'Enterprise').length;
@@ -202,7 +206,7 @@ export default function Home() {
       normalPct: totalUsers > 0 ? ((normalUsers.length + extraTotal) / totalUsers) * 100 : 0,
       businessUsers: businessUserCount, businessPool,
       enterpriseUsers: enterpriseUserCount, enterprisePool,
-      totalPool, poolUtilization,
+      totalPool, poolUtilization, businessConsumption, enterpriseConsumption,
       sumEffectiveBudgets, overageExposure, enterpriseValid, gap,
       okCount, nearCount, overCount,
       okPct: totalUsers > 0 ? (okCount / totalUsers) * 100 : 0,
@@ -559,6 +563,41 @@ export default function Home() {
               <StatRow label="Total Consumption" value={formatCurrency(stats.totalAicCost)} />
               <StatRow label="Pool Utilization" value={formatPct(stats.poolUtilization)} />
               <ProgressBar pct={stats.poolUtilization} />
+              {stats.totalPool > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>Pool vs Consumption by License Type</div>
+                  {/* Business bar */}
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 3, display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Business</span>
+                      <span>{formatCurrency(stats.businessConsumption)} / {formatCurrency(stats.businessPool)} ({stats.businessPool > 0 ? formatPct(stats.businessConsumption / stats.businessPool * 100) : '0%'})</span>
+                    </div>
+                    <div style={{ position: 'relative', height: 16, borderRadius: 4, overflow: 'hidden', background: 'rgba(99, 102, 241, 0.15)' }}>
+                      <div style={{ position: 'absolute', height: '100%', width: '100%', background: 'rgba(99, 102, 241, 0.25)', borderRadius: 4 }} />
+                      <div style={{
+                        position: 'absolute', height: '100%', borderRadius: 4,
+                        width: `${Math.min(100, stats.businessPool > 0 ? (stats.businessConsumption / stats.businessPool) * 100 : 0)}%`,
+                        background: stats.businessConsumption > stats.businessPool ? 'linear-gradient(90deg, #eab308, #ef4444)' : 'linear-gradient(90deg, #6366f1, #a855f7)',
+                      }} />
+                    </div>
+                  </div>
+                  {/* Enterprise bar */}
+                  <div>
+                    <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 3, display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Enterprise</span>
+                      <span>{formatCurrency(stats.enterpriseConsumption)} / {formatCurrency(stats.enterprisePool)} ({stats.enterprisePool > 0 ? formatPct(stats.enterpriseConsumption / stats.enterprisePool * 100) : '0%'})</span>
+                    </div>
+                    <div style={{ position: 'relative', height: 16, borderRadius: 4, overflow: 'hidden', background: 'rgba(99, 102, 241, 0.15)' }}>
+                      <div style={{ position: 'absolute', height: '100%', width: '100%', background: 'rgba(99, 102, 241, 0.25)', borderRadius: 4 }} />
+                      <div style={{
+                        position: 'absolute', height: '100%', borderRadius: 4,
+                        width: `${Math.min(100, stats.enterprisePool > 0 ? (stats.enterpriseConsumption / stats.enterprisePool) * 100 : 0)}%`,
+                        background: stats.enterpriseConsumption > stats.enterprisePool ? 'linear-gradient(90deg, #eab308, #ef4444)' : 'linear-gradient(90deg, #6366f1, #a855f7)',
+                      }} />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Budget Validation */}
