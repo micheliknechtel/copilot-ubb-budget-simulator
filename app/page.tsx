@@ -416,33 +416,53 @@ export default function Home() {
             )}
           </div>
         )}
-        <div style={{ display: 'flex', gap: 24, marginTop: 16, padding: '12px 16px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: 8 }}>
-          <div>
-            <span style={{ fontSize: 12, color: '#94a3b8' }}>Universal Budget</span>
-            <div style={{ fontSize: 14, color: '#64748b', marginTop: 2 }}>= License Price × {settings.universalMultiplier}</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#6366f1', marginTop: 4 }}>
-              B: {formatCurrency(universalBusiness)} {'\u00B7'} E: {formatCurrency(universalEnterprise)}
+        <div style={{ marginTop: 16, padding: '16px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#a855f7', marginBottom: 12 }}>💡 Budget Calculation (using your current settings)</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+            <div style={{ padding: '12px', background: 'rgba(15, 23, 42, 0.6)', borderRadius: 8, border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+              <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, marginBottom: 6 }}>UNIVERSAL BUDGET (Normal Users)</div>
+              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+                Business: ${settings.businessLicensePrice} × {settings.universalMultiplier} = <strong style={{ color: '#6366f1' }}>{formatCurrency(universalBusiness)}</strong>
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b' }}>
+                Enterprise: ${settings.enterpriseLicensePrice} × {settings.universalMultiplier} = <strong style={{ color: '#6366f1' }}>{formatCurrency(universalEnterprise)}</strong>
+              </div>
+              <div style={{ fontSize: 10, color: '#64748b', marginTop: 6, fontStyle: 'italic' }}>
+                {stats.normalUsers.toLocaleString()} normal users get this budget
+              </div>
             </div>
+            {userSummaries.length > 0 && (
+              <div style={{ padding: '12px', background: 'rgba(15, 23, 42, 0.6)', borderRadius: 8, border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginBottom: 6 }}>INDIVIDUAL BUDGET (Heavy Users)</div>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+                  Heavy User Avg: <strong style={{ color: '#ef4444' }}>{formatCurrency(stats.heavyMoyenne)}</strong>
+                </div>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+                  = MAX(Universal, {formatCurrency(stats.heavyMoyenne)} × {settings.individualMultiplier})
+                </div>
+                <div style={{ fontSize: 12, color: '#64748b' }}>
+                  = MAX({formatCurrency(Math.max(universalBusiness, universalEnterprise))}, {formatCurrency(stats.heavyMoyenne * settings.individualMultiplier)}) = <strong style={{ color: '#6366f1' }}>{formatCurrency(individualBudget)}</strong>
+                </div>
+                <div style={{ fontSize: 10, color: '#64748b', marginTop: 6, fontStyle: 'italic' }}>
+                  {stats.heavyUsers.toLocaleString()} heavy users (above moyenne) get this budget
+                </div>
+              </div>
+            )}
+            {userSummaries.length > 0 && (
+              <div style={{ padding: '12px', background: 'rgba(15, 23, 42, 0.6)', borderRadius: 8, border: '1px solid rgba(148, 163, 184, 0.15)' }}>
+                <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, marginBottom: 6 }}>REFERENCE VALUES</div>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+                  Moyenne (all {stats.csvUserCount.toLocaleString()} users): <strong style={{ color: '#6366f1' }}>{formatCurrency(stats.moyenne)}</strong>
+                </div>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+                  Heavy User Avg ({stats.heavyUsers.toLocaleString()} users): <strong style={{ color: '#ef4444' }}>{formatCurrency(stats.heavyMoyenne)}</strong>
+                </div>
+                <div style={{ fontSize: 12, color: '#64748b' }}>
+                  Median Cost: <strong style={{ color: '#6366f1' }}>{formatCurrency(stats.median)}</strong>
+                </div>
+              </div>
+            )}
           </div>
-          {userSummaries.length > 0 && (
-            <div>
-              <span style={{ fontSize: 12, color: '#94a3b8' }}>Individual Budget</span>
-              <div style={{ fontSize: 14, color: '#64748b', marginTop: 2 }}>= MAX(Universal, Heavy Avg × {settings.individualMultiplier})</div>
-              <div style={{ fontSize: 16, fontWeight: 600, color: '#6366f1', marginTop: 4 }}>{formatCurrency(individualBudget)}</div>
-            </div>
-          )}
-          {userSummaries.length > 0 && (
-            <div>
-              <span style={{ fontSize: 12, color: '#94a3b8' }}>Moyenne (All Users)</span>
-              <div style={{ fontSize: 16, fontWeight: 600, color: '#6366f1' }}>{formatCurrency(stats.moyenne)}</div>
-            </div>
-          )}
-          {userSummaries.length > 0 && (
-            <div>
-              <span style={{ fontSize: 12, color: '#94a3b8' }}>Heavy User Avg</span>
-              <div style={{ fontSize: 16, fontWeight: 600, color: '#ef4444' }}>{formatCurrency(stats.heavyMoyenne)}</div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -544,8 +564,13 @@ export default function Home() {
             {/* Budget Validation */}
             <div style={GLOW_CARD}>
               <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: '#a855f7' }}>✅ Budget Validation</h3>
+              <div style={{ fontSize: 10, color: '#64748b', marginBottom: 8, lineHeight: 1.5 }}>
+                Sum of all effective budgets (normal×universal + heavy×individual) vs license pool
+              </div>
               <StatRow label="Sum Effective Budgets" value={formatCurrency(stats.sumEffectiveBudgets)} />
-              <StatRow label="Overage Exposure" value={formatCurrency(stats.overageExposure)} />
+              <StatRow label="− License Pool" value={formatCurrency(stats.totalPool)} />
+              <div style={{ borderTop: '1px solid rgba(148, 163, 184, 0.2)', margin: '4px 0' }} />
+              <StatRow label="= Overage Exposure" value={formatCurrency(stats.overageExposure)} color={stats.overageExposure > settings.enterpriseBudget ? '#ef4444' : '#eab308'} />
               <StatRow label="Enterprise Budget" value={formatCurrency(settings.enterpriseBudget)} />
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid rgba(148, 163, 184, 0.1)' }}>
                 <span style={{ color: '#94a3b8' }}>Validation</span>
@@ -559,6 +584,10 @@ export default function Home() {
             {/* Simulation Impact */}
             <div style={GLOW_CARD}>
               <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: '#a855f7' }}>🎯 Simulation Impact</h3>
+              <div style={{ fontSize: 10, color: '#64748b', marginBottom: 8, lineHeight: 1.5 }}>
+                Users blocked when AIC cost {'>'} their effective budget
+                (Universal: B {formatCurrency(universalBusiness)} / E {formatCurrency(universalEnterprise)} {'\u00B7'} Individual: {formatCurrency(individualBudget)})
+              </div>
               <StatRow label="🟢 OK" value={`${stats.okCount} (${formatPct(stats.okPct)})`} color="#22c55e" />
               <StatRow label="🟡 NEAR" value={`${stats.nearCount} (${formatPct(stats.nearPct)})`} color="#eab308" />
               <StatRow label="🔴 OVER" value={`${stats.overCount} (${formatPct(stats.overPct)})`} color="#ef4444" />
