@@ -148,21 +148,13 @@ export function calculateUserSummaries(rows: CsvRow[], settings: Settings): User
   const totalAicCostAll = users.reduce((sum, [, u]) => sum + u.totalAic * settings.aicRate, 0);
   const moyenne = users.length > 0 ? totalAicCostAll / users.length : 0;
 
-  // Heavy user threshold = MAX universal budget across license types
-  // A user is "heavy" when their AIC cost exceeds this threshold
-  const heavyThreshold = settings.universalBudgetOverride > 0
-    ? settings.universalBudgetOverride
-    : Math.max(
-        settings.businessLicensePrice * settings.universalMultiplier,
-        settings.enterpriseLicensePrice * settings.universalMultiplier
-      );
-
+  // Heavy user = user whose AIC cost exceeds the overall average (moyenne)
   const heavyUserCosts = users
     .map(([, data]) => data.totalAic * settings.aicRate)
-    .filter(cost => cost > heavyThreshold);
+    .filter(cost => cost > moyenne);
   const heavyMoyenne = heavyUserCosts.length > 0
     ? heavyUserCosts.reduce((s, c) => s + c, 0) / heavyUserCosts.length
-    : heavyThreshold;
+    : moyenne;
 
   return users.map(([username, data]) => {
     const licenseType = getLicenseType(data.costCenter, data.monthlyQuota);
@@ -171,7 +163,7 @@ export function calculateUserSummaries(rows: CsvRow[], settings: Settings): User
       ? settings.universalBudgetOverride
       : licensePrice * settings.universalMultiplier;
     const totalAicCost = data.totalAic * settings.aicRate;
-    const isHeavyUser = totalAicCost > heavyThreshold;
+    const isHeavyUser = totalAicCost > moyenne;
     const individualBudget = settings.individualBudgetOverride > 0
       ? settings.individualBudgetOverride
       : Math.max(universalBudget, heavyMoyenne * settings.individualMultiplier);
