@@ -381,19 +381,33 @@ export default function Home() {
             <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>
               {simulationMode === 'practical' ? (
                 <>
-                  <strong style={{ color: '#22c55e' }}>Practical mode:</strong> Only users with actual consumption contribute to overage exposure.
-                  Zero-consumption users add to the license pool but are <em>not</em> counted in the effective budgets.
-                  Adding users with no consumption <strong>improves</strong> pool utilization and budget validation.
-                  Best for realistic day-to-day budget planning.
+                  <strong style={{ color: '#22c55e' }}>Practical mode:</strong> Only users who actually consumed AI credits count toward overage exposure.
+                  Users with zero consumption still contribute their license fee to the pool (more pool = better),
+                  but they are <em>not</em> assigned a budget allowance (no consumption = no potential overage).
+                  <strong>Result:</strong> Adding more users always improves your budget position.
                 </>
               ) : (
                 <>
-                  <strong style={{ color: '#eab308' }}>Conservative mode:</strong> All users (including zero-consumption) contribute to overage exposure,
-                  assuming they <em>could</em> consume up to their universal budget limit.
-                  Each extra user adds potential overage (budget − license = ${(settings.enterpriseLicensePrice * settings.universalMultiplier - settings.enterpriseLicensePrice).toFixed(2)}/Enterprise).
-                  Best for worst-case risk planning and budget safeguards.
+                  <strong style={{ color: '#eab308' }}>Conservative mode:</strong> Every user — even those with zero consumption — is assigned
+                  their full universal budget allowance. This assumes any user <em>could</em> start consuming up to their limit at any time.
+                  <strong>Result:</strong> Each extra Enterprise user adds ${(settings.enterpriseLicensePrice * settings.universalMultiplier - settings.enterpriseLicensePrice).toFixed(2)} of
+                  potential overage ({formatCurrency(settings.enterpriseLicensePrice * settings.universalMultiplier)} budget − ${settings.enterpriseLicensePrice} license).
+                  Best for worst-case risk planning.
                 </>
               )}
+            </div>
+            <div style={{ marginTop: 12, padding: '10px 16px', background: 'rgba(99, 102, 241, 0.06)', borderRadius: 8, border: '1px solid rgba(99, 102, 241, 0.15)' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#6366f1', marginBottom: 6 }}>📖 KEY DEFINITIONS</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8, fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
+                <div><strong style={{ color: '#e2e8f0' }}>License Pool</strong> = Total license fees paid (users × license price). This is what you pay GitHub.</div>
+                <div><strong style={{ color: '#e2e8f0' }}>Universal Budget</strong> = License × Multiplier. The max consumption allowed per normal user before alert.</div>
+                <div><strong style={{ color: '#e2e8f0' }}>Effective Budget</strong> = Universal budget for normal users; higher individual budget for heavy users.</div>
+                <div><strong style={{ color: '#e2e8f0' }}>Included Credits</strong> = The portion of consumption covered by the license fee (= license price).</div>
+                <div><strong style={{ color: '#e2e8f0' }}>Overage</strong> = Per-user consumption above their included credits: max(0, AIC cost − license price).</div>
+                <div><strong style={{ color: '#e2e8f0' }}>Overage Exposure</strong> = Sum of all effective budgets − pool. The total consumption allowed <em>above</em> what licenses cover.</div>
+                <div><strong style={{ color: '#e2e8f0' }}>Enterprise Budget</strong> = The budget set aside to cover overage exposure. Must be ≥ overage exposure to validate.</div>
+                <div><strong style={{ color: '#e2e8f0' }}>Gap</strong> = Enterprise Budget − Overage Exposure. Positive = safe margin. Negative = insufficient budget.</div>
+              </div>
             </div>
           </div>
 
