@@ -336,7 +336,7 @@ export default function Home() {
             <span style={{ fontSize: 12, color: '#94a3b8' }}>Universal Budget</span>
             <div style={{ fontSize: 14, color: '#64748b', marginTop: 2 }}>= License Price × {settings.universalMultiplier}</div>
             <div style={{ fontSize: 16, fontWeight: 600, color: '#6366f1', marginTop: 4 }}>
-              B: {formatCurrency(universalBusiness)} · E: {formatCurrency(universalEnterprise)}
+              B: {formatCurrency(universalBusiness)} {'\u00B7'} E: {formatCurrency(universalEnterprise)}
             </div>
           </div>
           {userSummaries.length > 0 && (
