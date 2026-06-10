@@ -13,6 +13,7 @@ export type UserSummary = {
   totalAicQty: number;
   totalAicCost: number;
   moyenne: number;
+  heavyMoyenne: number;
   isHeavyUser: boolean;
   effectiveBudget: number;
   includedCredits: number;
@@ -111,13 +112,21 @@ export function calculateUserSummaries(rows: CsvRow[], settings: Settings): User
   const totalAicCostAll = users.reduce((sum, [, u]) => sum + u.totalAic * settings.aicRate, 0);
   const moyenne = users.length > 0 ? totalAicCostAll / users.length : 0;
 
+  // Two-pass: first identify heavy users, then compute their average
+  const heavyUserCosts = users
+    .map(([, data]) => data.totalAic * settings.aicRate)
+    .filter(cost => cost > moyenne);
+  const heavyMoyenne = heavyUserCosts.length > 0
+    ? heavyUserCosts.reduce((s, c) => s + c, 0) / heavyUserCosts.length
+    : moyenne;
+
   return users.map(([username, data]) => {
     const licenseType = getLicenseType(data.costCenter);
     const licensePrice = licenseType === 'Business' ? settings.businessLicensePrice : settings.enterpriseLicensePrice;
     const universalBudget = licensePrice * settings.universalMultiplier;
     const totalAicCost = data.totalAic * settings.aicRate;
     const isHeavyUser = totalAicCost > moyenne;
-    const individualBudget = Math.max(universalBudget, moyenne * settings.individualMultiplier);
+    const individualBudget = Math.max(universalBudget, heavyMoyenne * settings.individualMultiplier);
     const effectiveBudget = isHeavyUser ? individualBudget : universalBudget;
     const includedCredits = licensePrice;
     const overage = Math.max(0, totalAicCost - includedCredits);
@@ -134,6 +143,7 @@ export function calculateUserSummaries(rows: CsvRow[], settings: Settings): User
       totalAicQty: data.totalAic,
       totalAicCost,
       moyenne,
+      heavyMoyenne,
       isHeavyUser,
       effectiveBudget,
       includedCredits,
@@ -156,12 +166,12 @@ export function formatPct(value: number): string {
 export function exportTableCsv(users: UserSummary[]): string {
   const headers = [
     'Username', 'Cost Center', 'License Type', 'Total AIC Qty', 'Total AIC Cost ($)',
-    'Moyenne ($)', 'Is Heavy User?', 'Effective Budget ($)', 'Included Credits ($)',
+    'Moyenne ($)', 'Heavy Moyenne ($)', 'Is Heavy User?', 'Effective Budget ($)', 'Included Credits ($)',
     'Overage ($)', 'Budget Headroom ($)', 'Budget Used (%)', 'Status'
   ];
   const rows = users.map(u => [
     u.username, u.costCenter, u.licenseType, u.totalAicQty.toString(), u.totalAicCost.toFixed(2),
-    u.moyenne.toFixed(2), u.isHeavyUser ? 'Yes' : 'No', u.effectiveBudget.toFixed(2),
+    u.moyenne.toFixed(2), u.heavyMoyenne.toFixed(2), u.isHeavyUser ? 'Yes' : 'No', u.effectiveBudget.toFixed(2),
     u.includedCredits.toFixed(2), u.overage.toFixed(2), u.budgetHeadroom.toFixed(2),
     u.budgetUsedPct.toFixed(1), u.status
   ]);

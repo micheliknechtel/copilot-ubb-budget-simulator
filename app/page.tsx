@@ -120,6 +120,7 @@ export default function Home() {
       : 0;
     const heavyUsers = userSummaries.filter(u => u.isHeavyUser);
     const normalUsers = userSummaries.filter(u => !u.isHeavyUser);
+    const heavyMoyenne = heavyUsers.length > 0 ? heavyUsers[0].heavyMoyenne : moyenne;
     const businessUserCount = settings.businessUsers;
     const enterpriseUserCount = settings.enterpriseUsers;
     const businessPool = businessUserCount * settings.businessLicensePrice;
@@ -166,11 +167,11 @@ export default function Home() {
       .map(u => u.totalAicCost / dominantLicensePrice)
       .sort((a, b) => a - b);
 
-    // Heavy user blocked when: AIC cost > MAX(Universal, Moyenne × IndividualMultiplier)
-    // → multiplier needed = AIC cost / moyenne
+    // Heavy user blocked when: AIC cost > MAX(Universal, HeavyMoyenne × IndividualMultiplier)
+    // → multiplier needed = AIC cost / heavyMoyenne
     const heavyUserMultipliers = userSummaries
-      .filter(u => u.isHeavyUser && moyenne > 0)
-      .map(u => u.totalAicCost / moyenne)
+      .filter(u => u.isHeavyUser && heavyMoyenne > 0)
+      .map(u => u.totalAicCost / heavyMoyenne)
       .sort((a, b) => a - b);
 
     const getPercentile = (arr: number[], pct: number) => {
@@ -195,7 +196,7 @@ export default function Home() {
     const suggestedEnterpriseBudget = Math.ceil(overageExposure / 100) * 100;
 
     return {
-      totalUsers, csvUserCount, totalAicCost, moyenne, median,
+      totalUsers, csvUserCount, totalAicCost, moyenne, median, heavyMoyenne,
       heavyUsers: heavyUsers.length, heavyPct: totalUsers > 0 ? (heavyUsers.length / totalUsers) * 100 : 0,
       normalUsers: normalUsers.length + extraTotal,
       normalPct: totalUsers > 0 ? ((normalUsers.length + extraTotal) / totalUsers) * 100 : 0,
@@ -259,7 +260,7 @@ export default function Home() {
 
   const universalBusiness = settings.businessLicensePrice * settings.universalMultiplier;
   const universalEnterprise = settings.enterpriseLicensePrice * settings.universalMultiplier;
-  const individualBudget = Math.max(universalBusiness, universalEnterprise, stats.moyenne * settings.individualMultiplier);
+  const individualBudget = Math.max(universalBusiness, universalEnterprise, stats.heavyMoyenne * settings.individualMultiplier);
 
   const handleExportCsv = useCallback(() => {
     const csvContent = exportTableCsv(filteredUsers);
@@ -426,14 +427,20 @@ export default function Home() {
           {userSummaries.length > 0 && (
             <div>
               <span style={{ fontSize: 12, color: '#94a3b8' }}>Individual Budget</span>
-              <div style={{ fontSize: 14, color: '#64748b', marginTop: 2 }}>= MAX(Universal, Moyenne × {settings.individualMultiplier})</div>
+              <div style={{ fontSize: 14, color: '#64748b', marginTop: 2 }}>= MAX(Universal, Heavy Avg × {settings.individualMultiplier})</div>
               <div style={{ fontSize: 16, fontWeight: 600, color: '#6366f1', marginTop: 4 }}>{formatCurrency(individualBudget)}</div>
             </div>
           )}
           {userSummaries.length > 0 && (
             <div>
-              <span style={{ fontSize: 12, color: '#94a3b8' }}>Moyenne (Average)</span>
+              <span style={{ fontSize: 12, color: '#94a3b8' }}>Moyenne (All Users)</span>
               <div style={{ fontSize: 16, fontWeight: 600, color: '#6366f1' }}>{formatCurrency(stats.moyenne)}</div>
+            </div>
+          )}
+          {userSummaries.length > 0 && (
+            <div>
+              <span style={{ fontSize: 12, color: '#94a3b8' }}>Heavy User Avg</span>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#ef4444' }}>{formatCurrency(stats.heavyMoyenne)}</div>
             </div>
           )}
         </div>
