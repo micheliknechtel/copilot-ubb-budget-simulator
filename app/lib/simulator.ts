@@ -174,7 +174,7 @@ export function calculateUserSummaries(rows: CsvRow[], settings: Settings): User
     const budgetHeadroom = budgetAllowance - overage;
     const budgetUsedPct = budgetAllowance > 0 ? (overage / budgetAllowance) * 100 : 0;
     const status: 'OK' | 'NEAR' | 'OVER' =
-      budgetHeadroom < 0 ? 'OVER' : budgetUsedPct >= 80 ? 'NEAR' : 'OK';
+      budgetHeadroom <= 0 ? 'OVER' : budgetUsedPct >= 80 ? 'NEAR' : 'OK';
 
     return {
       username,
