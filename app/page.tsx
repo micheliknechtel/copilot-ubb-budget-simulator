@@ -125,11 +125,28 @@ export default function Home() {
     const enterprisePool = enterpriseUserCount * settings.enterpriseLicensePrice;
     const totalPool = businessPool + enterprisePool;
     const poolUtilization = totalPool > 0 ? (totalAicCost / totalPool) * 100 : 0;
-    const sumEffectiveBudgets = userSummaries.reduce((s, u) => s + u.effectiveBudget, 0);
+
+    // Count CSV users by license type
+    const csvBusinessCount = userSummaries.filter(u => u.licenseType === 'Business').length;
+    const csvEnterpriseCount = userSummaries.filter(u => u.licenseType === 'Enterprise').length;
+
+    // Extra non-CSV users (zero consumption) per license type
+    const extraBusiness = Math.max(0, businessUserCount - csvBusinessCount);
+    const extraEnterprise = Math.max(0, enterpriseUserCount - csvEnterpriseCount);
+    const extraTotal = extraBusiness + extraEnterprise;
+
+    // Non-CSV users get universal budget (zero consumption = normal user)
+    const universalBudgetBusiness = settings.businessLicensePrice * settings.universalMultiplier;
+    const universalBudgetEnterprise = settings.enterpriseLicensePrice * settings.universalMultiplier;
+    const extraEffectiveBudgets = extraBusiness * universalBudgetBusiness + extraEnterprise * universalBudgetEnterprise;
+
+    const sumEffectiveBudgets = userSummaries.reduce((s, u) => s + u.effectiveBudget, 0) + extraEffectiveBudgets;
     const overageExposure = sumEffectiveBudgets - totalPool;
     const enterpriseValid = overageExposure <= settings.enterpriseBudget;
     const gap = settings.enterpriseBudget - overageExposure;
-    const okCount = userSummaries.filter(u => u.status === 'OK').length;
+
+    // Non-CSV users are always OK (0% budget used)
+    const okCount = userSummaries.filter(u => u.status === 'OK').length + extraTotal;
     const nearCount = userSummaries.filter(u => u.status === 'NEAR').length;
     const overCount = userSummaries.filter(u => u.status === 'OVER').length;
 
@@ -140,17 +157,19 @@ export default function Home() {
 
     return {
       totalUsers, csvUserCount, totalAicCost, moyenne, median,
-      heavyUsers: heavyUsers.length, heavyPct: csvUserCount > 0 ? (heavyUsers.length / csvUserCount) * 100 : 0,
-      normalUsers: normalUsers.length, normalPct: csvUserCount > 0 ? (normalUsers.length / csvUserCount) * 100 : 0,
+      heavyUsers: heavyUsers.length, heavyPct: totalUsers > 0 ? (heavyUsers.length / totalUsers) * 100 : 0,
+      normalUsers: normalUsers.length + extraTotal,
+      normalPct: totalUsers > 0 ? ((normalUsers.length + extraTotal) / totalUsers) * 100 : 0,
       businessUsers: businessUserCount, businessPool,
       enterpriseUsers: enterpriseUserCount, enterprisePool,
       totalPool, poolUtilization,
       sumEffectiveBudgets, overageExposure, enterpriseValid, gap,
       okCount, nearCount, overCount,
-      okPct: csvUserCount > 0 ? (okCount / csvUserCount) * 100 : 0,
-      nearPct: csvUserCount > 0 ? (nearCount / csvUserCount) * 100 : 0,
-      overPct: csvUserCount > 0 ? (overCount / csvUserCount) * 100 : 0,
+      okPct: totalUsers > 0 ? (okCount / totalUsers) * 100 : 0,
+      nearPct: totalUsers > 0 ? (nearCount / totalUsers) * 100 : 0,
+      overPct: totalUsers > 0 ? (overCount / totalUsers) * 100 : 0,
       suggestedUniversalMultiplier, suggestedEnterpriseBudget,
+      extraBusiness, extraEnterprise,
     };
   }, [userSummaries, settings]);
 
@@ -338,6 +357,9 @@ export default function Home() {
               <StatRow label="Enterprise Users" value={settings.enterpriseUsers.toLocaleString()} />
               {stats.csvUserCount > 0 && stats.csvUserCount !== stats.totalUsers && (
                 <StatRow label="Users in CSV" value={stats.csvUserCount.toLocaleString()} color="#94a3b8" />
+              )}
+              {(stats.extraBusiness + stats.extraEnterprise) > 0 && (
+                <StatRow label="Zero-consumption users" value={`${(stats.extraBusiness + stats.extraEnterprise).toLocaleString()} (${stats.extraBusiness} B / ${stats.extraEnterprise} E)`} color="#64748b" />
               )}
               <StatRow label="Total AIC Cost" value={formatCurrency(stats.totalAicCost)} />
               <StatRow label="Moyenne" value={formatCurrency(stats.moyenne)} />
