@@ -154,11 +154,16 @@ export default function Home() {
     const overCount = userSummaries.filter(u => u.status === 'OVER').length;
 
     // Suggested multipliers at different coverage levels
+    // Use the license price of whichever type has the most users
+    const dominantLicensePrice = businessUserCount >= enterpriseUserCount
+      ? settings.businessLicensePrice
+      : settings.enterpriseLicensePrice;
+
     // Normal user blocked when: AIC cost > License × UniversalMultiplier
-    // → multiplier needed = AIC cost / license price
+    // → multiplier needed = AIC cost / dominant license price
     const normalUserMultipliers = userSummaries
       .filter(u => !u.isHeavyUser)
-      .map(u => u.totalAicCost / (u.licenseType === 'Business' ? settings.businessLicensePrice : settings.enterpriseLicensePrice))
+      .map(u => u.totalAicCost / dominantLicensePrice)
       .sort((a, b) => a - b);
 
     // Heavy user blocked when: AIC cost > MAX(Universal, Moyenne × IndividualMultiplier)
