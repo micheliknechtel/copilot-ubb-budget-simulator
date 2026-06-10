@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   CsvRow, UserSummary, Settings, DEFAULT_SETTINGS,
   parseCsv, calculateUserSummaries, formatCurrency, formatPct, exportTableCsv,
@@ -72,6 +72,34 @@ export default function Home() {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const ROWS_PER_PAGE = 50;
+
+  const loadCsvText = useCallback((text: string, name: string) => {
+    const rows = parseCsv(text);
+    setCsvRows(rows);
+    setFileName(name);
+    setCurrentPage(1);
+    const uniqueUsers = new Set(rows.map(r => r.username));
+    const hasQuota = rows.some(r => r.monthly_quota > 0);
+    let businessCount: number;
+    if (hasQuota) {
+      businessCount = new Set(rows.filter(r => r.monthly_quota > 0 && r.monthly_quota <= 1900).map(r => r.username)).size;
+    } else {
+      businessCount = new Set(rows.filter(r => r.cost_center_name.toLowerCase().includes('#business')).map(r => r.username)).size;
+    }
+    const enterpriseCount = uniqueUsers.size - businessCount;
+    setCsvInfo({ totalUsers: uniqueUsers.size, businessUsers: businessCount, enterpriseUsers: enterpriseCount });
+    if (!userCountOverride) {
+      setSettings(prev => ({ ...prev, businessUsers: businessCount, enterpriseUsers: enterpriseCount }));
+    }
+  }, [userCountOverride]);
+
+  // Auto-load example data on startup
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/example-data.csv`)
+      .then(r => { if (!r.ok) throw new Error('No example data'); return r.text(); })
+      .then(text => loadCsvText(text, 'Example Data (anonymized)'))
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const userSummaries = useMemo(
     () => calculateUserSummaries(csvRows, settings),
@@ -222,27 +250,10 @@ export default function Home() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      const rows = parseCsv(text);
-      setCsvRows(rows);
-      setFileName(file.name);
-      setCurrentPage(1);
-      const uniqueUsers = new Set(rows.map(r => r.username));
-      // Detect license type: prefer monthly_quota, fall back to cost_center_name
-      const hasQuota = rows.some(r => r.monthly_quota > 0);
-      let businessCount: number;
-      if (hasQuota) {
-        businessCount = new Set(rows.filter(r => r.monthly_quota > 0 && r.monthly_quota <= 1900).map(r => r.username)).size;
-      } else {
-        businessCount = new Set(rows.filter(r => r.cost_center_name.toLowerCase().includes('#business')).map(r => r.username)).size;
-      }
-      const enterpriseCount = uniqueUsers.size - businessCount;
-      setCsvInfo({ totalUsers: uniqueUsers.size, businessUsers: businessCount, enterpriseUsers: enterpriseCount });
-      if (!userCountOverride) {
-        setSettings(prev => ({ ...prev, businessUsers: businessCount, enterpriseUsers: enterpriseCount }));
-      }
+      loadCsvText(text, file.name);
     };
     reader.readAsText(file);
-  }, [userCountOverride]);
+  }, [loadCsvText]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
