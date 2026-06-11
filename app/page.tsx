@@ -364,8 +364,6 @@ export default function Home() {
             ['enterpriseLicensePrice', 'Enterprise License ($)', settings.enterpriseLicensePrice],
             ['universalMultiplier', 'Universal Multiplier', settings.universalMultiplier],
             ['individualMultiplier', 'Individual Multiplier', settings.individualMultiplier],
-            ['universalBudgetOverride', 'Universal Budget Override ($)', settings.universalBudgetOverride],
-            ['individualBudgetOverride', 'Individual Budget Override ($)', settings.individualBudgetOverride],
             ['enterpriseBudget', 'Enterprise Budget ($)', settings.enterpriseBudget],
             ['aicRate', 'AIC Rate ($/AIC)', settings.aicRate],
           ] as [keyof Settings, string, number][]).map(([key, label, value]) => {
@@ -374,7 +372,6 @@ export default function Home() {
               : key === 'individualMultiplier' ? stats.individualOptions
               : null
               : null;
-            const isOverrideField = key === 'universalBudgetOverride' || key === 'individualBudgetOverride';
             const isMultiplierDisabled = (key === 'universalMultiplier' && settings.universalBudgetOverride > 0)
               || (key === 'individualMultiplier' && settings.individualBudgetOverride > 0);
             const enterpriseSuggestion = stats.csvUserCount > 0 && key === 'enterpriseBudget' ? stats.suggestedEnterpriseBudget : null;
@@ -385,8 +382,7 @@ export default function Home() {
             <div key={key}>
               <label style={{ fontSize: 12, color: isMultiplierDisabled ? '#475569' : '#94a3b8', display: 'block', marginBottom: 4 }}>
                 {label}
-                {isOverrideField && <span style={{ fontSize: 10, color: '#64748b' }}> (0 = use multiplier)</span>}
-                {isMultiplierDisabled && <span style={{ fontSize: 10, color: '#eab308' }}> (overridden)</span>}
+                {isMultiplierDisabled && <span style={{ fontSize: 10, color: '#eab308' }}> (overridden by card)</span>}
               </label>
               <input
                 type="number"
@@ -462,15 +458,28 @@ export default function Home() {
           <div style={{ fontSize: 13, fontWeight: 600, color: '#a855f7', marginBottom: 12 }}>💡 Budget Calculation (using your current settings)</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
             <div style={{ padding: '12px', background: 'rgba(15, 23, 42, 0.6)', borderRadius: 8, border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-              <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, marginBottom: 6 }}>
-                UNIVERSAL BUDGET (Normal Users)
+              <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>
+                  UNIVERSAL BUDGET (Normal Users)
+                  {settings.universalBudgetOverride > 0
+                    ? <span style={{ color: '#eab308', marginLeft: 6 }}>⚡ Manual</span>
+                    : <span style={{ color: '#6366f1', marginLeft: 6 }}>📊 Data-driven</span>}
+                </span>
                 {settings.universalBudgetOverride > 0
-                  ? <span style={{ color: '#eab308', marginLeft: 6 }}>⚡ Manual</span>
-                  : <span style={{ color: '#6366f1', marginLeft: 6 }}>📊 Data-driven</span>}
+                  ? <button onClick={() => updateSetting('universalBudgetOverride', '0')} style={{ fontSize: 10, color: '#64748b', background: 'none', border: '1px solid rgba(100,116,139,0.3)', borderRadius: 4, padding: '1px 6px', cursor: 'pointer' }}>✕ Reset</button>
+                  : <button onClick={() => updateSetting('universalBudgetOverride', String(Math.max(universalBusiness, universalEnterprise)))} style={{ fontSize: 10, color: '#a855f7', background: 'none', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 4, padding: '1px 6px', cursor: 'pointer' }}>✏️ Edit</button>}
               </div>
               {settings.universalBudgetOverride > 0 ? (
-                <div style={{ fontSize: 12, color: '#64748b' }}>
-                  Fixed: <strong style={{ color: '#6366f1' }}>{formatCurrency(settings.universalBudgetOverride)}</strong> per user
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, color: '#64748b' }}>$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={settings.universalBudgetOverride}
+                    onChange={(e) => updateSetting('universalBudgetOverride', e.target.value)}
+                    style={{ ...INPUT_STYLE, width: 110, padding: '4px 8px', fontSize: 13 }}
+                  />
+                  <span style={{ fontSize: 11, color: '#64748b' }}>per user</span>
                 </div>
               ) : (
                 <>
@@ -488,15 +497,28 @@ export default function Home() {
             </div>
             {userSummaries.length > 0 && (
               <div style={{ padding: '12px', background: 'rgba(15, 23, 42, 0.6)', borderRadius: 8, border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginBottom: 6 }}>
-                INDIVIDUAL BUDGET (Heavy Users)
-                {settings.individualBudgetOverride > 0
-                  ? <span style={{ color: '#eab308', marginLeft: 6 }}>⚡ Manual</span>
-                  : <span style={{ color: '#6366f1', marginLeft: 6 }}>📊 Data-driven</span>}
-              </div>
+                <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>
+                    INDIVIDUAL BUDGET (Heavy Users)
+                    {settings.individualBudgetOverride > 0
+                      ? <span style={{ color: '#eab308', marginLeft: 6 }}>⚡ Manual</span>
+                      : <span style={{ color: '#6366f1', marginLeft: 6 }}>📊 Data-driven</span>}
+                  </span>
+                  {settings.individualBudgetOverride > 0
+                    ? <button onClick={() => updateSetting('individualBudgetOverride', '0')} style={{ fontSize: 10, color: '#64748b', background: 'none', border: '1px solid rgba(100,116,139,0.3)', borderRadius: 4, padding: '1px 6px', cursor: 'pointer' }}>✕ Reset</button>
+                    : <button onClick={() => updateSetting('individualBudgetOverride', String(individualBudget))} style={{ fontSize: 10, color: '#a855f7', background: 'none', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 4, padding: '1px 6px', cursor: 'pointer' }}>✏️ Edit</button>}
+                </div>
               {settings.individualBudgetOverride > 0 ? (
-                <div style={{ fontSize: 12, color: '#64748b' }}>
-                  Fixed: <strong style={{ color: '#6366f1' }}>{formatCurrency(settings.individualBudgetOverride)}</strong> per user
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, color: '#64748b' }}>$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={settings.individualBudgetOverride}
+                    onChange={(e) => updateSetting('individualBudgetOverride', e.target.value)}
+                    style={{ ...INPUT_STYLE, width: 110, padding: '4px 8px', fontSize: 13 }}
+                  />
+                  <span style={{ fontSize: 11, color: '#64748b' }}>per user</span>
                 </div>
               ) : (
                 <>
