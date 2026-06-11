@@ -158,6 +158,7 @@ export function calculateUserSummaries(rows: CsvRow[], settings: Settings): User
 
   // Heavy user threshold: use moyenne, but if heavy avg < universal budget,
   // switch to universal budget (those "heavy" users aren't actually blocked)
+  const toCents = (value: number) => Math.round(value * 100);
   const allCosts = users.map(([, data]) => data.totalAic * settings.aicRate);
   const moyenneHeavyCosts = allCosts.filter(cost => cost > moyenne);
   const moyenneHeavyAvg = moyenneHeavyCosts.length > 0
@@ -165,7 +166,8 @@ export function calculateUserSummaries(rows: CsvRow[], settings: Settings): User
     : moyenne;
 
   const heavyThreshold = moyenneHeavyAvg < maxUniversalBudget ? maxUniversalBudget : moyenne;
-  const heavyUserCosts = allCosts.filter(cost => cost > heavyThreshold);
+  const heavyThresholdCents = toCents(heavyThreshold);
+  const heavyUserCosts = allCosts.filter(cost => toCents(cost) >= heavyThresholdCents);
   const heavyMoyenne = heavyUserCosts.length > 0
     ? heavyUserCosts.reduce((s, c) => s + c, 0) / heavyUserCosts.length
     : maxUniversalBudget;
@@ -177,7 +179,7 @@ export function calculateUserSummaries(rows: CsvRow[], settings: Settings): User
       ? settings.universalBudgetOverride
       : licensePrice * settings.universalMultiplier;
     const totalAicCost = data.totalAic * settings.aicRate;
-    const isHeavyUser = totalAicCost > heavyThreshold;
+    const isHeavyUser = toCents(totalAicCost) >= heavyThresholdCents;
     const individualBudget = settings.individualBudgetOverride > 0
       ? settings.individualBudgetOverride
       : Math.max(universalBudget, heavyMoyenne * settings.individualMultiplier);
@@ -187,8 +189,10 @@ export function calculateUserSummaries(rows: CsvRow[], settings: Settings): User
     const budgetAllowance = effectiveBudget - includedCredits;
     const budgetHeadroom = budgetAllowance - overage;
     const budgetUsedPct = budgetAllowance > 0 ? (overage / budgetAllowance) * 100 : 0;
+    // Use direct threshold checks so equality (cost === effective budget) is always OVER.
+    const overLimit = toCents(totalAicCost) >= toCents(effectiveBudget);
     const status: 'OK' | 'NEAR' | 'OVER' =
-      budgetHeadroom <= 0 ? 'OVER' : budgetUsedPct >= 80 ? 'NEAR' : 'OK';
+      overLimit ? 'OVER' : budgetUsedPct >= 80 ? 'NEAR' : 'OK';
 
     return {
       username,
@@ -220,7 +224,7 @@ export function formatPct(value: number): string {
 export function exportTableCsv(users: UserSummary[]): string {
   const headers = [
     'Username', 'Cost Center', 'License Type', 'Total AIC Qty', 'Total AIC Cost ($)',
-    'Moyenne ($)', 'Heavy Moyenne ($)', 'Is Heavy User?', 'Effective Budget ($)', 'Included Credits ($)',
+    'Moyenne ($)', 'Heavy Moyenne ($)', 'Is Heavy User?', 'Effective Budget ($)', 'License Credit ($)',
     'Overage ($)', 'Budget Headroom ($)', 'Budget Used (%)', 'Status'
   ];
   const rows = users.map(u => [
